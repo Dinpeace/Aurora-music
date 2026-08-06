@@ -1,7 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
-import '../../data/models/song.dart';
+import 'package:aurora_music/data/models/song.dart';
 
 enum PlayerRepeatMode {
   off,
@@ -16,7 +17,6 @@ class PlayerState {
   final bool isShuffleEnabled;
   final PlayerRepeatMode repeatMode;
   final Duration position;
-  final Duration duration;
 
   const PlayerState({
     this.currentSong,
@@ -25,7 +25,6 @@ class PlayerState {
     this.isShuffleEnabled = false,
     this.repeatMode = PlayerRepeatMode.off,
     this.position = Duration.zero,
-    this.duration = Duration.zero,
   });
 
   PlayerState copyWith({
@@ -35,16 +34,15 @@ class PlayerState {
     bool? isShuffleEnabled,
     PlayerRepeatMode? repeatMode,
     Duration? position,
-    Duration? duration,
   }) {
     return PlayerState(
       currentSong: currentSong ?? this.currentSong,
       queue: queue ?? this.queue,
       isPlaying: isPlaying ?? this.isPlaying,
-      isShuffleEnabled: isShuffleEnabled ?? this.isShuffleEnabled,
+      isShuffleEnabled:
+          isShuffleEnabled ?? this.isShuffleEnabled,
       repeatMode: repeatMode ?? this.repeatMode,
       position: position ?? this.position,
-      duration: duration ?? this.duration,
     );
   }
 }
@@ -53,12 +51,6 @@ class PlayerController extends StateNotifier<PlayerState> {
   PlayerController() : super(const PlayerState()) {
     _player.positionStream.listen((position) {
       state = state.copyWith(position: position);
-    });
-
-    _player.durationStream.listen((duration) {
-      state = state.copyWith(
-        duration: duration ?? Duration.zero,
-      );
     });
 
     _player.playerStateStream.listen((playerState) {
@@ -75,17 +67,19 @@ class PlayerController extends StateNotifier<PlayerState> {
     List<Song> queue = const [],
   }) async {
     try {
-      await _player.setUrl(song.audioUrl);
+      await _player.setFilePath(song.audioUrl);
+
+      await _player.play();
 
       state = state.copyWith(
         currentSong: song,
         queue: queue,
+        isPlaying: true,
         position: Duration.zero,
-        duration: song.duration,
       );
-
-      await _player.play();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Playback Error: $e');
+    }
   }
 
   Future<void> togglePlayPause() async {
@@ -108,6 +102,40 @@ class PlayerController extends StateNotifier<PlayerState> {
     state = state.copyWith(
       isShuffleEnabled: enabled,
     );
+  }
+
+  Future<void> previousSong() async {
+    if (state.currentSong == null || state.queue.isEmpty) {
+      return;
+    }
+
+    final index = state.queue.indexWhere(
+      (song) => song.id == state.currentSong!.id,
+    );
+
+    if (index > 0) {
+      await playSong(
+        state.queue[index - 1],
+        queue: state.queue,
+      );
+    }
+  }
+
+  Future<void> nextSong() async {
+    if (state.currentSong == null || state.queue.isEmpty) {
+      return;
+    }
+
+    final index = state.queue.indexWhere(
+      (song) => song.id == state.currentSong!.id,
+    );
+
+    if (index < state.queue.length - 1) {
+      await playSong(
+        state.queue[index + 1],
+        queue: state.queue,
+      );
+    }
   }
 
   Future<void> cycleRepeatMode() async {
@@ -133,12 +161,6 @@ class PlayerController extends StateNotifier<PlayerState> {
         );
         break;
     }
-  }
-
-  Future<void> stop() async {
-    await _player.stop();
-
-    state = const PlayerState();
   }
 
   @override

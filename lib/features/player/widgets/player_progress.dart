@@ -6,40 +6,65 @@ import '../player_controller.dart';
 class PlayerProgress extends ConsumerWidget {
   const PlayerProgress({super.key});
 
-  String format(Duration d) {
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return "$m:$s";
+  String _format(Duration duration) {
+    final minutes =
+        duration.inMinutes.remainder(60).toString().padLeft(2, '0');
+
+    final seconds =
+        duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+
+    return '$minutes:$seconds';
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(playerControllerProvider);
 
+    final currentSong = player.currentSong;
+
+    final totalDuration =
+        currentSong?.duration ?? Duration.zero;
+
+    final position = player.position;
+
     return Column(
       children: [
         Slider(
-          value: player.position.inSeconds.toDouble(),
-          max: player.duration.inSeconds == 0
+          value: position.inMilliseconds
+              .clamp(
+                0,
+                totalDuration.inMilliseconds,
+              )
+              .toDouble(),
+          max: totalDuration.inMilliseconds == 0
               ? 1
-              : player.duration.inSeconds.toDouble(),
+              : totalDuration.inMilliseconds.toDouble(),
           onChanged: (value) {
             ref
                 .read(playerControllerProvider.notifier)
-                .seek(Duration(seconds: value.toInt()));
+                .seek(
+                  Duration(
+                    milliseconds: value.toInt(),
+                  ),
+                );
           },
         ),
 
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              format(player.position),
-              style: const TextStyle(color: Colors.white70),
+              _format(position),
+              style: const TextStyle(
+                color: Colors.white70,
+              ),
             ),
             Text(
-              format(player.duration),
-              style: const TextStyle(color: Colors.white70),
+              _format(totalDuration),
+              style: const TextStyle(
+                color: Colors.white70,
+              ),
             ),
           ],
         ),

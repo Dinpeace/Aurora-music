@@ -11,30 +11,38 @@ class PlayerArtwork extends ConsumerWidget {
     final song = ref.watch(playerControllerProvider).currentSong;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(28),
       child: AspectRatio(
         aspectRatio: 1,
-        child: song == null
-            ? Container(
-                color: Colors.grey.shade900,
-                child: const Icon(
-                  Icons.music_note,
-                  size: 100,
-                  color: Colors.white54,
-                ),
-              )
-            : Image.network(
+        child: song != null && song.artwork.isNotEmpty
+            ? Image.network(
                 song.artwork,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => Container(
-                  color: Colors.grey.shade900,
-                  child: const Icon(
-                    Icons.music_note,
-                    color: Colors.white54,
-                    size: 100,
-                  ),
-                ),
-              ),
+                errorBuilder: (_, _, _) => _placeholder(),
+              )
+            : _placeholder(),
+      ),
+    );
+  }
+
+  Widget _placeholder() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFA855F7),
+            Color(0xFF22D3EE),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.music_note_rounded,
+          size: 120,
+          color: Colors.white,
+        ),
       ),
     );
   }

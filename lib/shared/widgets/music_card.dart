@@ -20,7 +20,8 @@ class MusicCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 170,
-      child: GestureDetector(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -31,58 +32,35 @@ class MusicCard extends StatelessWidget {
                   tag: title,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
-                    child: Image.asset(
-                      image,
-                      width: 170,
-                      height: 170,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) {
-                        return Container(
-                          width: 170,
-                          height: 170,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            gradient: const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFFA855F7),
-                                Color(0xFF22D3EE),
-                              ],
-                            ),
-                          ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.music_note_rounded,
-                              color: Colors.white,
-                              size: 60,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                    child: image.isNotEmpty
+                        ? Image.network(
+                            image,
+                            width: 170,
+                            height: 170,
+                            fit: BoxFit.cover,
+                           errorBuilder: (_, _, _) =>_placeholder(),
+                          )
+                        : _placeholder(),
                   ),
                 ),
 
                 Positioned(
-                  right: 12,
                   top: 12,
+                  right: 12,
                   child: Container(
+                    padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: Colors.black54,
+                      color: Colors.black45,
                       borderRadius: BorderRadius.circular(50),
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: Icon(
-                        isFavorite
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: isFavorite
-                            ? Colors.redAccent
-                            : Colors.white,
-                        size: 18,
-                      ),
+                    child: Icon(
+                      isFavorite
+                          ? Icons.favorite
+                          : Icons.favorite_border,
+                      color: isFavorite
+                          ? Colors.redAccent
+                          : Colors.white,
+                      size: 18,
                     ),
                   ),
                 ),
@@ -91,8 +69,8 @@ class MusicCard extends StatelessWidget {
                   bottom: 12,
                   right: 12,
                   child: Container(
-                    width: 46,
-                    height: 46,
+                    width: 48,
+                    height: 48,
                     decoration: const BoxDecoration(
                       color: Color(0xFFA855F7),
                       shape: BoxShape.circle,
@@ -100,7 +78,6 @@ class MusicCard extends StatelessWidget {
                     child: const Icon(
                       Icons.play_arrow_rounded,
                       color: Colors.white,
-                      size: 28,
                     ),
                   ),
                 ),
@@ -127,11 +104,36 @@ class MusicCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: Colors.white54,
+                color: Colors.white60,
                 fontSize: 13,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() {
+    return Container(
+      width: 170,
+      height: 170,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFA855F7),
+            Color(0xFF22D3EE),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.music_note_rounded,
+          color: Colors.white,
+          size: 64,
         ),
       ),
     );

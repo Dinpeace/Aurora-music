@@ -1,48 +1,43 @@
 import '../models/song.dart';
-import '../sources/demo_music_source.dart';
+import '../services/local_music_service.dart';
 
 class MusicRepository {
-  const MusicRepository();
+  MusicRepository({
+    LocalMusicService? localMusicService,
+  }) : _localMusicService =
+            localMusicService ?? const LocalMusicService();
 
-  List<Song> getRecentlyPlayed() {
-    return List.unmodifiable(DemoMusicSource.recentlyPlayed);
+  final LocalMusicService _localMusicService;
+
+  Future<bool> requestPermission() async {
+    return _localMusicService.requestPermission();
   }
 
-  List<Song> getTrending() {
-    return List.unmodifiable(DemoMusicSource.trending);
+  Future<List<Song>> getSongs() async {
+    return _localMusicService.getSongs();
   }
 
-  List<Song> getNewReleases() {
-    return List.unmodifiable(DemoMusicSource.newReleases);
+  Future<List<Song>> getTrending() async {
+    return getSongs();
   }
 
-  List<Song> getAllSongs() {
-    return [
-      ...DemoMusicSource.recentlyPlayed,
-      ...DemoMusicSource.trending,
-      ...DemoMusicSource.newReleases,
-    ];
+  Future<List<Song>> getRecentlyPlayed() async {
+    return getSongs();
   }
 
-  Song? getSongById(String id) {
-    try {
-      return getAllSongs().firstWhere((song) => song.id == id);
-    } catch (_) {
-      return null;
-    }
+  Future<List<Song>> getNewReleases() async {
+    return getSongs();
   }
 
-  List<Song> searchSongs(String query) {
-    if (query.trim().isEmpty) {
-      return getAllSongs();
-    }
+  Future<List<dynamic>> getAlbums() async {
+    return _localMusicService.getAlbums();
+  }
 
-    final search = query.toLowerCase();
+  Future<List<dynamic>> getArtists() async {
+    return _localMusicService.getArtists();
+  }
 
-    return getAllSongs().where((song) {
-      return song.title.toLowerCase().contains(search) ||
-          song.artist.toLowerCase().contains(search) ||
-          song.album.toLowerCase().contains(search);
-    }).toList();
+  Future<List<dynamic>> getPlaylists() async {
+    return _localMusicService.getPlaylists();
   }
 }

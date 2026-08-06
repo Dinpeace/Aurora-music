@@ -12,23 +12,43 @@ class PlayerScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(playerControllerProvider);
-    final song = state.currentSong;
+    final player = ref.watch(playerControllerProvider);
+    final song = player.currentSong;
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
       body: SafeArea(
         child: song == null
             ? const Center(
-                child: Text(
-                  'No song selected',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.music_note_rounded,
+                      size: 90,
+                      color: Colors.white38,
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      "Nothing Playing",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      "Select a song from your library",
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
                 ),
               )
-            : Padding(
+            : SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
@@ -38,11 +58,13 @@ class PlayerScreen extends ConsumerWidget {
 
                     const PlayerArtwork(),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
                     Text(
                       song.title,
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 28,
@@ -54,6 +76,9 @@ class PlayerScreen extends ConsumerWidget {
 
                     Text(
                       song.artist,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 18,
@@ -64,9 +89,11 @@ class PlayerScreen extends ConsumerWidget {
 
                     const PlayerProgress(),
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
 
                     const PlayerButtons(),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),

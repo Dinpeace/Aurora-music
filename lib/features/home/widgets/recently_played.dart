@@ -1,58 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../shared/providers/repository_provider.dart';
 import '../../../shared/widgets/music_card.dart';
-import '../../../shared/widgets/section_title.dart';
-import '../../player/player_controller.dart';
+import '../../library/library_controller.dart';
 
-class RecentlyPlayedSection extends ConsumerWidget {
-  const RecentlyPlayedSection({super.key});
+class RecentlyPlayed extends ConsumerWidget {
+  const RecentlyPlayed({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(musicRepositoryProvider);
-    final songs = repository.getRecentlyPlayed();
+    final library = ref.watch(libraryControllerProvider);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SectionTitle(
-          title: 'Recently Played',
-          onSeeAll: () {},
+    if (library.loading) {
+      return const SizedBox(
+        height: 220,
+        child: Center(
+          child: CircularProgressIndicator(),
         ),
+      );
+    }
 
-        const SizedBox(height: 16),
-
-        SizedBox(
-          height: 245,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: songs.length,
-            separatorBuilder: (_, _) =>
-                const SizedBox(width: 16),
-            itemBuilder: (context, index) {
-              final song = songs[index];
-
-              return MusicCard(
-                title: song.title,
-                artist: song.artist,
-                image: song.artwork,
-                isFavorite: song.favorite,
-                onTap: () async {
-                  await ref
-                      .read(playerControllerProvider.notifier)
-                      .playSong(
-                        song,
-                        queue: songs,
-                      );
-                },
-              );
-            },
+    if (library.songs.isEmpty) {
+      return const SizedBox(
+        height: 220,
+        child: Center(
+          child: Text(
+            "Nothing played yet",
+            style: TextStyle(color: Colors.white70),
           ),
         ),
-      ],
+      );
+    }
+
+    return SizedBox(
+      height: 250,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        scrollDirection: Axis.horizontal,
+        itemCount: library.songs.length,
+        separatorBuilder: (_, _) =>
+            const SizedBox(width: 16),
+        itemBuilder: (context, index) {
+          final song = library.songs[index];
+
+          return MusicCard(
+            title: song.title,
+            artist: song.artist,
+            image: song.artwork,
+            onTap: () {},
+          );
+        },
+      ),
     );
   }
 }

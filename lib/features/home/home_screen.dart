@@ -43,7 +43,7 @@ class HomeScreen extends StatelessWidget {
 
               SizedBox(height: 36),
 
-              RecentlyPlayedSection(),
+              RecentlyPlayed(),
 
               SizedBox(height: 32),
 
@@ -51,7 +51,7 @@ class HomeScreen extends StatelessWidget {
 
               SizedBox(height: 32),
 
-              NewReleasesSection(),
+              NewReleases(),
 
               SizedBox(height: 32),
 
@@ -70,30 +70,28 @@ class HomeScreen extends StatelessWidget {
         height: 72,
         backgroundColor: const Color(0xFF18181B),
         indicatorColor: const Color(0xFFA855F7),
-
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
-            label: "Home",
+            label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.search_outlined),
             selectedIcon: Icon(Icons.search),
-            label: "Search",
+            label: 'Search',
           ),
           NavigationDestination(
             icon: Icon(Icons.library_music_outlined),
             selectedIcon: Icon(Icons.library_music),
-            label: "Library",
+            label: 'Library',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
-            label: "Settings",
+            label: 'Settings',
           ),
         ],
-
         onDestinationSelected: (_) {},
       ),
     );
