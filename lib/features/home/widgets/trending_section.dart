@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/music_card.dart';
 import '../../library/library_controller.dart';
+import '../../player/player_controller.dart';
 
 class TrendingSection extends ConsumerStatefulWidget {
   const TrendingSection({super.key});
@@ -41,7 +42,7 @@ class _TrendingSectionState
         height: 220,
         child: Center(
           child: Text(
-            "Storage permission required",
+            'Storage permission required',
             style: TextStyle(color: Colors.white70),
           ),
         ),
@@ -53,7 +54,7 @@ class _TrendingSectionState
         height: 220,
         child: Center(
           child: Text(
-            "No music found",
+            'No music found',
             style: TextStyle(color: Colors.white70),
           ),
         ),
@@ -66,7 +67,7 @@ class _TrendingSectionState
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
         itemCount: library.songs.length,
-        separatorBuilder: (_, _) =>
+        separatorBuilder: (context, index) =>
             const SizedBox(width: 16),
         itemBuilder: (context, index) {
           final song = library.songs[index];
@@ -74,9 +75,14 @@ class _TrendingSectionState
           return MusicCard(
             title: song.title,
             artist: song.artist,
-            image: song.artwork,
+            image: song.artwork ?? '',
             onTap: () {
-              // Player integration comes next.
+              ref
+                  .read(playerControllerProvider.notifier)
+                  .playSong(
+                    song,
+                    queue: library.songs,
+                  );
             },
           );
         },

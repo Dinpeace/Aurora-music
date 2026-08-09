@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/widgets/music_card.dart';
 import '../../library/library_controller.dart';
+import '../../player/player_controller.dart';
 
 class NewReleases extends ConsumerWidget {
   const NewReleases({super.key});
@@ -25,7 +26,7 @@ class NewReleases extends ConsumerWidget {
         height: 220,
         child: Center(
           child: Text(
-            "No new releases",
+            'No new releases',
             style: TextStyle(color: Colors.white70),
           ),
         ),
@@ -38,7 +39,7 @@ class NewReleases extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
         itemCount: library.songs.length,
-        separatorBuilder: (_, _) =>
+        separatorBuilder: (context, index) =>
             const SizedBox(width: 16),
         itemBuilder: (context, index) {
           final song = library.songs[index];
@@ -46,8 +47,15 @@ class NewReleases extends ConsumerWidget {
           return MusicCard(
             title: song.title,
             artist: song.artist,
-            image: song.artwork,
-            onTap: () {},
+            image: song.artwork ?? '',
+            onTap: () {
+              ref
+                  .read(playerControllerProvider.notifier)
+                  .playSong(
+                    song,
+                    queue: library.songs,
+                  );
+            },
           );
         },
       ),

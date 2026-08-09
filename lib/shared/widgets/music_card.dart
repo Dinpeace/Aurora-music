@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 class MusicCard extends StatelessWidget {
   final String title;
   final String artist;
+
+  /// Empty string means no artwork available.
   final String image;
+
   final VoidCallback? onTap;
   final bool isFavorite;
 
@@ -18,6 +21,8 @@ class MusicCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasArtwork = image.trim().isNotEmpty;
+
     return SizedBox(
       width: 170,
       child: InkWell(
@@ -32,13 +37,16 @@ class MusicCard extends StatelessWidget {
                   tag: title,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
-                    child: image.isNotEmpty
+                    child: hasArtwork
                         ? Image.network(
                             image,
                             width: 170,
                             height: 170,
                             fit: BoxFit.cover,
-                           errorBuilder: (_, _, _) =>_placeholder(),
+                            errorBuilder:
+                                (context, error, stackTrace) {
+                              return _placeholder();
+                            },
                           )
                         : _placeholder(),
                   ),

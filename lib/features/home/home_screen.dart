@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../shared/widgets/featured_banner.dart';
 import '../../shared/widgets/search_bar.dart';
+import '../library/library_screen.dart';
+import '../search/search_screen.dart';
+import '../settings/settings_screen.dart';
 
 import 'widgets/greeting.dart';
 import 'widgets/home_header.dart';
@@ -11,8 +14,52 @@ import 'widgets/recently_played.dart';
 import 'widgets/top_artists.dart';
 import 'widgets/trending_section.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+
+  void _onDestinationSelected(int index) {
+    if (index == _selectedIndex) return;
+
+    setState(() {
+      _selectedIndex = index;
+    });
+
+    switch (index) {
+      case 1:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const SearchScreen(),
+          ),
+        );
+        break;
+
+      case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const LibraryScreen(),
+          ),
+        );
+        break;
+
+      case 3:
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const SettingsScreen(),
+          ),
+        );
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,10 +113,11 @@ class HomeScreen extends StatelessWidget {
       bottomSheet: const MiniPlayer(),
 
       bottomNavigationBar: NavigationBar(
-        selectedIndex: 0,
+        selectedIndex: _selectedIndex,
         height: 72,
         backgroundColor: const Color(0xFF18181B),
         indicatorColor: const Color(0xFFA855F7),
+        onDestinationSelected: _onDestinationSelected,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
@@ -92,7 +140,6 @@ class HomeScreen extends StatelessWidget {
             label: 'Settings',
           ),
         ],
-        onDestinationSelected: (_) {},
       ),
     );
   }

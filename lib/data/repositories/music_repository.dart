@@ -9,35 +9,23 @@ class MusicRepository {
 
   final LocalMusicService _localMusicService;
 
-  Future<bool> requestPermission() async {
+  Future<bool> requestPermission() {
     return _localMusicService.requestPermission();
   }
 
-  Future<List<Song>> getSongs() async {
+  Future<List<Song>> getSongs() {
     return _localMusicService.getSongs();
   }
 
-  Future<List<Song>> getTrending() async {
+  Future<List<Song>> getTrending() {
     return getSongs();
   }
 
-  Future<List<Song>> getRecentlyPlayed() async {
+  Future<List<Song>> getRecentlyPlayed() {
     return getSongs();
   }
 
-  Future<List<Song>> getNewReleases() async {
+  Future<List<Song>> getNewReleases() {
     return getSongs();
-  }
-
-  Future<List<dynamic>> getAlbums() async {
-    return _localMusicService.getAlbums();
-  }
-
-  Future<List<dynamic>> getArtists() async {
-    return _localMusicService.getArtists();
-  }
-
-  Future<List<dynamic>> getPlaylists() async {
-    return _localMusicService.getPlaylists();
   }
 }

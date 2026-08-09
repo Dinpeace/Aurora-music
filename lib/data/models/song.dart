@@ -3,8 +3,13 @@ class Song {
   final String title;
   final String artist;
   final String album;
-  final String artwork;
+
+  /// Nullable artwork URI returned by Android MediaStore.
+  final String? artwork;
+
+  /// Absolute path to the audio file.
   final String audioUrl;
+
   final Duration duration;
   final bool favorite;
 
@@ -13,7 +18,7 @@ class Song {
     required this.title,
     required this.artist,
     required this.album,
-    required this.artwork,
+    this.artwork,
     required this.audioUrl,
     required this.duration,
     this.favorite = false,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../shared/widgets/artwork_widget.dart';
 import '../../player/player_controller.dart';
 
 class MiniPlayer extends ConsumerWidget {
@@ -13,105 +15,117 @@ class MiniPlayer extends ConsumerWidget {
 
     return Material(
       color: const Color(0xFF18181B),
+      elevation: 8,
       child: InkWell(
         onTap: () {
-          Navigator.pushNamed(context, '/player');
+          context.push('/player');
         },
         child: SafeArea(
           top: false,
-          child: Container(
-            height: 74,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ),
-            child: Row(
+          child: SizedBox(
+            height: 88,
+            child: Column(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: song != null && song.artwork.isNotEmpty
-                      ? Image.network(
-                          song.artwork,
-                          width: 58,
-                          height: 58,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              _placeholderArtwork(),
-                        )
-                      : _placeholderArtwork(),
-                ),
-
-                const SizedBox(width: 14),
-
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        song?.title ?? "Nothing Playing",
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                      ),
-
-                      const SizedBox(height: 4),
-
-                      Text(
-                        song?.artist ?? "Aurora Music",
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white60,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
+                LinearProgressIndicator(
+                  value: player.progress,
+                  minHeight: 2,
+                  backgroundColor: Colors.white12,
+                  valueColor: const AlwaysStoppedAnimation(
+                    Color(0xFFA855F7),
                   ),
                 ),
 
-                IconButton(
-                  onPressed: () {
-                    ref
-                        .read(playerControllerProvider.notifier)
-                        .togglePlayPause();
-                  },
-                  icon: Icon(
-                    player.isPlaying
-                        ? Icons.pause_circle_filled_rounded
-                        : Icons.play_circle_fill_rounded,
-                    color: Colors.white,
-                    size: 36,
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        ArtworkWidget(
+                          artwork: song?.artwork,
+                          width: 56,
+                          height: 56,
+                          borderRadius:
+                              BorderRadius.circular(12),
+                        ),
+
+                        const SizedBox(width: 14),
+
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment:
+                                MainAxisAlignment.center,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                song?.title ??
+                                    'Nothing Playing',
+                                maxLines: 1,
+                                overflow:
+                                    TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight:
+                                      FontWeight.w600,
+                                ),
+                              ),
+
+                              const SizedBox(height: 4),
+
+                              Text(
+                                song?.artist ??
+                                    'Aurora Music',
+                                maxLines: 1,
+                                overflow:
+                                    TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white60,
+                                  fontSize: 13,
+                                ),
+                              ),
+
+                              const SizedBox(height: 6),
+
+                              Text(
+                                '${player.positionText} / ${player.durationText}',
+                                style: const TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        IconButton(
+                          onPressed: () {
+                            ref
+                                .read(
+                                  playerControllerProvider
+                                      .notifier,
+                                )
+                                .togglePlayPause();
+                          },
+                          icon: Icon(
+                            player.isPlaying
+                                ? Icons.pause_circle_filled
+                                : Icons.play_circle_fill,
+                            size: 38,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _placeholderArtwork() {
-    return Container(
-      width: 58,
-      height: 58,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFFA855F7),
-            Color(0xFF22D3EE),
-          ],
-        ),
-      ),
-      child: const Icon(
-        Icons.music_note_rounded,
-        color: Colors.white,
       ),
     );
   }

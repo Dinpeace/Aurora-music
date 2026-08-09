@@ -14,11 +14,13 @@ class PlayerArtwork extends ConsumerWidget {
       borderRadius: BorderRadius.circular(28),
       child: AspectRatio(
         aspectRatio: 1,
-        child: song != null && song.artwork.isNotEmpty
+        child: (song?.artwork?.isNotEmpty ?? false)
             ? Image.network(
-                song.artwork,
+                song!.artwork!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, _, _) => _placeholder(),
+                errorBuilder: (context, error, stackTrace) {
+                  return _placeholder();
+                },
               )
             : _placeholder(),
       ),

@@ -35,7 +35,7 @@ dependencies:
   # -----------------------------
   # Networking
   # -----------------------------
-  dio: ^5.9.0
+  dio: ^5.11.0
 
   # -----------------------------
   # Audio Engine
@@ -61,6 +61,7 @@ dependencies:
   # -----------------------------
   intl: ^0.20.2
   collection: ^1.19.1
+  pretty_dio_logger: ^1.4.0
 
 dev_dependencies:
   flutter_test:

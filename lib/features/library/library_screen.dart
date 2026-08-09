@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/models/song.dart';
+import '../player/player_controller.dart';
 import 'library_controller.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -27,8 +29,9 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
       appBar: AppBar(
-        title: const Text("Library"),
+        title: const Text('Library'),
         backgroundColor: const Color(0xFF09090B),
+        elevation: 0,
       ),
       body: Builder(
         builder: (context) {
@@ -41,7 +44,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           if (!library.permissionGranted) {
             return const Center(
               child: Text(
-                "Permission required",
+                'Storage permission required.',
                 style: TextStyle(color: Colors.white),
               ),
             );
@@ -50,16 +53,19 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
           if (library.songs.isEmpty) {
             return const Center(
               child: Text(
-                "No music found",
+                'No songs found.',
                 style: TextStyle(color: Colors.white),
               ),
             );
           }
 
-          return ListView.builder(
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: library.songs.length,
+            separatorBuilder: (context, index) =>
+                const Divider(height: 1),
             itemBuilder: (context, index) {
-              final song = library.songs[index];
+              final Song song = library.songs[index];
 
               return ListTile(
                 leading: const CircleAvatar(
@@ -67,14 +73,27 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
                 ),
                 title: Text(
                   song.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: Colors.white),
                 ),
                 subtitle: Text(
                   song.artist,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(color: Colors.white70),
                 ),
+                trailing: const Icon(
+                  Icons.play_arrow,
+                  color: Colors.white,
+                ),
                 onTap: () {
-                  // Playback comes next.
+                  ref
+                      .read(playerControllerProvider.notifier)
+                      .playSong(
+                        song,
+                        queue: library.songs,
+                      );
                 },
               );
             },

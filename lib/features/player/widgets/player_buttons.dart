@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../player_controller.dart';
+import '../player_state.dart';
 
 class PlayerButtons extends ConsumerWidget {
   const PlayerButtons({super.key});
@@ -15,7 +16,9 @@ class PlayerButtons extends ConsumerWidget {
       children: [
         IconButton(
           onPressed: () {
-            ref.read(playerControllerProvider.notifier).toggleShuffle();
+            ref
+                .read(playerControllerProvider.notifier)
+                .toggleShuffle();
           },
           icon: Icon(
             Icons.shuffle,
@@ -26,7 +29,11 @@ class PlayerButtons extends ConsumerWidget {
         ),
 
         IconButton(
-          onPressed: () {},
+          onPressed: () {
+            ref
+                .read(playerControllerProvider.notifier)
+                .previousSong();
+          },
           icon: const Icon(
             Icons.skip_previous_rounded,
             size: 40,
@@ -58,7 +65,11 @@ class PlayerButtons extends ConsumerWidget {
         ),
 
         IconButton(
-          onPressed: () {},
+          onPressed: () {
+            ref
+                .read(playerControllerProvider.notifier)
+                .nextSong();
+          },
           icon: const Icon(
             Icons.skip_next_rounded,
             size: 40,

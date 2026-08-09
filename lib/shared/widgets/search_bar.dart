@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class AuroraSearchBar extends StatelessWidget {
   const AuroraSearchBar({super.key});
@@ -6,6 +7,8 @@ class AuroraSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
+      readOnly: true,
+      onTap: () => context.push('/search'),
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: 'Search songs, artists, albums...',
