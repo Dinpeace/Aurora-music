@@ -16,6 +16,8 @@ class PlayerState {
 
   final Duration position;
   final Duration duration;
+  final Duration sleepTimerRemaining;
+  final Duration crossfadeDuration;
 
   const PlayerState({
     this.currentSong,
@@ -25,6 +27,8 @@ class PlayerState {
     this.repeatMode = PlayerRepeatMode.off,
     this.position = Duration.zero,
     this.duration = Duration.zero,
+    this.sleepTimerRemaining = Duration.zero,
+    this.crossfadeDuration = Duration.zero,
   });
 
   double get progress {
@@ -55,6 +59,8 @@ class PlayerState {
     PlayerRepeatMode? repeatMode,
     Duration? position,
     Duration? duration,
+    Duration? sleepTimerRemaining,
+    Duration? crossfadeDuration,
   }) {
     return PlayerState(
       currentSong: currentSong ?? this.currentSong,
@@ -65,6 +71,10 @@ class PlayerState {
       repeatMode: repeatMode ?? this.repeatMode,
       position: position ?? this.position,
       duration: duration ?? this.duration,
+      sleepTimerRemaining:
+          sleepTimerRemaining ?? this.sleepTimerRemaining,
+      crossfadeDuration:
+          crossfadeDuration ?? this.crossfadeDuration,
     );
   }
 }
