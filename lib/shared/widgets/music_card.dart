@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class MusicCard extends StatelessWidget {
+import '../../features/library/favorite_provider.dart';
+
+class MusicCard extends ConsumerWidget {
   final String title;
   final String artist;
-
-  /// Empty string means no artwork available.
   final String image;
-
   final VoidCallback? onTap;
   final bool isFavorite;
+
+  /// Stable song identifier used by the local Favorites system.
+  final String? favoriteId;
+
+  /// Metadata saved with a favorite. If omitted, the heart remains visual-only.
+  final String favoriteAlbum;
+  final String favoriteStreamUrl;
+  final Duration favoriteDuration;
+  final bool favoriteIsOnline;
 
   const MusicCard({
     super.key,
@@ -17,10 +26,19 @@ class MusicCard extends StatelessWidget {
     required this.image,
     this.onTap,
     this.isFavorite = false,
+    this.favoriteId,
+    this.favoriteAlbum = '',
+    this.favoriteStreamUrl = '',
+    this.favoriteDuration = Duration.zero,
+    this.favoriteIsOnline = false,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final canFavorite = favoriteId != null && favoriteId!.trim().isNotEmpty;
+    final storedFavorite =
+        canFavorite ? ref.watch(favoriteProvider).items.any((e) => e.id == favoriteId) : false;
+    final favorite = canFavorite ? storedFavorite : isFavorite;
     final hasArtwork = image.trim().isNotEmpty;
 
     return SizedBox(
@@ -43,36 +61,54 @@ class MusicCard extends StatelessWidget {
                             width: 170,
                             height: 170,
                             fit: BoxFit.cover,
-                            errorBuilder:
-                                (context, error, stackTrace) {
-                              return _placeholder();
-                            },
+                            errorBuilder: (context, error, stackTrace) =>
+                                _placeholder(),
                           )
                         : _placeholder(),
                   ),
                 ),
-
                 Positioned(
                   top: 12,
                   right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
                       borderRadius: BorderRadius.circular(50),
-                    ),
-                    child: Icon(
-                      isFavorite
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      color: isFavorite
-                          ? Colors.redAccent
-                          : Colors.white,
-                      size: 18,
+                      onTap: canFavorite
+                          ? () async {
+                              final item = FavoriteItem(
+                                id: favoriteId!,
+                                title: title,
+                                artist: artist,
+                                album: favoriteAlbum,
+                                artwork: image,
+                                streamUrl: favoriteStreamUrl,
+                                durationMs:
+                                    favoriteDuration.inMilliseconds,
+                                isOnline: favoriteIsOnline,
+                              );
+                              await ref
+                                  .read(favoriteProvider.notifier)
+                                  .toggle(item);
+                            }
+                          : null,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black45,
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                        child: Icon(
+                          favorite
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          color: favorite ? Colors.redAccent : Colors.white,
+                          size: 18,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-
                 Positioned(
                   bottom: 12,
                   right: 12,
@@ -91,9 +127,7 @@ class MusicCard extends StatelessWidget {
                 ),
               ],
             ),
-
             const SizedBox(height: 12),
-
             Text(
               title,
               maxLines: 1,
@@ -104,9 +138,7 @@ class MusicCard extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 4),
-
             Text(
               artist,
               maxLines: 1,
@@ -126,15 +158,10 @@ class MusicCard extends StatelessWidget {
     return Container(
       width: 170,
       height: 170,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFA855F7),
-            Color(0xFF22D3EE),
-          ],
+      decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(Radius.circular(24)),
+        gradient: LinearGradient(
+          colors: [Color(0xFFA855F7), Color(0xFF22D3EE)],
         ),
       ),
       child: const Center(

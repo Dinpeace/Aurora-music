@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/auth/auth_service.dart';
 import '../player/player_controller.dart';
 
 enum AudioQuality {
@@ -74,10 +77,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _loading = true;
   bool _checkingForUpdates = false;
 
+  User? _currentUser;
+  StreamSubscription<User?>? _authSubscription;
+
   @override
   void initState() {
     super.initState();
     _loadSettings();
+
+    _currentUser = AuthService.instance.currentUser;
+    _authSubscription = AuthService.instance.authStateChanges.listen((user) {
+      if (!mounted) return;
+      setState(() => _currentUser = user);
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -682,6 +700,171 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Future<void> _showAccountDialog() async {
+    if (_currentUser == null) {
+      await showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: const Color(0xFF18181B),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        builder: (sheetContext) {
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Icon(
+                    Icons.account_circle_outlined,
+                    color: Color(0xFFA855F7),
+                    size: 64,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Aurora Account',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Sign in to sync your library across devices.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white60, fontSize: 15),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFFA855F7),
+                      ),
+                      onPressed: () async {
+                        Navigator.pop(sheetContext);
+                        try {
+                          await AuthService.instance.signInWithGoogle();
+                        } on FirebaseAuthException catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                e.message ?? 'Google Sign-In failed.',
+                              ),
+                            ),
+                          );
+                        } catch (_) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Could not sign in with Google.'),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.login_rounded),
+                      label: const Text('Continue with Google'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'You can continue using Aurora without an account.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white38, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: const Color(0xFF18181B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) {
+        final user = _currentUser!;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 34,
+                  backgroundImage:
+                      user.photoURL != null ? NetworkImage(user.photoURL!) : null,
+                  child: user.photoURL == null
+                      ? const Icon(Icons.person, size: 34)
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  user.displayName ?? 'Aurora User',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 21,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (user.email != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    user.email!,
+                    style: const TextStyle(color: Colors.white60, fontSize: 14),
+                  ),
+                ],
+                const SizedBox(height: 24),
+                const ListTile(
+                  leading: Icon(
+                    Icons.cloud_done_outlined,
+                    color: Color(0xFFA855F7),
+                  ),
+                  title: Text(
+                    'Cloud Sync',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    'Ready to sync your Aurora library',
+                    style: TextStyle(color: Colors.white60),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(sheetContext);
+                      await AuthService.instance.signOut();
+                    },
+                    icon: const Icon(Icons.logout_rounded),
+                    label: const Text('Sign out'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   void _showUpdateMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -733,22 +916,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               ListTile(
                 leading: _iconBox(Icons.person_outline),
-                title: const Text(
-                  'Aurora Account',
-                  style: TextStyle(
+                title: Text(
+                  _currentUser == null
+                      ? 'Aurora Account'
+                      : (_currentUser!.displayName ?? 'Aurora Account'),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                subtitle: const Text(
-                  'Optional • Sign in to sync your library',
-                  style: TextStyle(color: Colors.white60),
+                subtitle: Text(
+                  _currentUser == null
+                      ? 'Optional • Sign in to sync your library'
+                      : (_currentUser!.email ?? 'Signed in with Google'),
+                  style: const TextStyle(color: Colors.white60),
                 ),
                 trailing: const Icon(
                   Icons.chevron_right_rounded,
                   color: Colors.white54,
                 ),
-                onTap: () => _showComingSoon('Account & Google Sign-In'),
+                onTap: _showAccountDialog,
               ),
             ],
           ),

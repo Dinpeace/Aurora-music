@@ -76,6 +76,11 @@ class _TrendingSectionState
             title: song.title,
             artist: song.artist,
             image: song.artwork ?? '',
+            favoriteId: song.id,
+            favoriteAlbum: song.album,
+            favoriteStreamUrl: song.audioUrl,
+            favoriteDuration: song.duration,
+            favoriteIsOnline: false,
             onTap: () {
               ref
                   .read(playerControllerProvider.notifier)

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers/search_provider.dart';
 import '../../data/models/online/online_song.dart';
+import '../library/favorite_provider.dart';
 import '../player/player_controller.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -173,7 +174,7 @@ class _SearchBody extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
       itemCount: songs.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final song = songs[index];
         return _SearchSongTile(
@@ -185,7 +186,7 @@ class _SearchBody extends StatelessWidget {
   }
 }
 
-class _SearchSongTile extends StatelessWidget {
+class _SearchSongTile extends ConsumerWidget {
   const _SearchSongTile({
     required this.song,
     required this.onTap,
@@ -195,8 +196,11 @@ class _SearchSongTile extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hasArtwork = song.artwork.trim().isNotEmpty;
+    final isFavorite = ref.watch(favoriteProvider).items.any(
+          (item) => item.id == song.id,
+        );
 
     return Material(
       color: const Color(0xFF18181B),
@@ -216,7 +220,8 @@ class _SearchSongTile extends StatelessWidget {
                         width: 58,
                         height: 58,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => _placeholder(),
+                        errorBuilder: (context, error, stackTrace) =>
+                            _placeholder(),
                       )
                     : _placeholder(),
               ),
@@ -224,6 +229,7 @@ class _SearchSongTile extends StatelessWidget {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       song.title,
@@ -234,24 +240,53 @@ class _SearchSongTile extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 4),
                     Text(
-                      '${song.artist} • ${song.album}',
+                      song.artist,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 13,
-                      ),
+                      style: const TextStyle(color: Colors.white60),
                     ),
+                    if (song.album.trim().isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        song.album,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white38,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              IconButton(
+                tooltip: isFavorite
+                    ? 'Remove from favorites'
+                    : 'Add to favorites',
+                icon: Icon(
+                  isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: isFavorite ? Colors.redAccent : Colors.white70,
+                ),
+                onPressed: () async {
+                  final item = FavoriteItem(
+                    id: song.id,
+                    title: song.title,
+                    artist: song.artist,
+                    album: song.album,
+                    artwork: song.artwork,
+                    streamUrl: song.streamUrl,
+                    durationMs: song.duration.inMilliseconds,
+                    isOnline: true,
+                  );
+                  await ref.read(favoriteProvider.notifier).toggle(item);
+                },
+              ),
               const Icon(
-                Icons.play_circle_fill_rounded,
-                color: Color(0xFFA855F7),
-                size: 34,
+                Icons.play_arrow_rounded,
+                color: Colors.white70,
               ),
             ],
           ),
@@ -265,11 +300,9 @@ class _SearchSongTile extends StatelessWidget {
       width: 58,
       height: 58,
       decoration: const BoxDecoration(
+        borderRadius: BorderRadius.all(Radius.circular(12)),
         gradient: LinearGradient(
-          colors: [
-            Color(0xFFA855F7),
-            Color(0xFF22D3EE),
-          ],
+          colors: [Color(0xFFA855F7), Color(0xFF22D3EE)],
         ),
       ),
       child: const Icon(

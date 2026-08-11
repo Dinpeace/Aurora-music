@@ -40,7 +40,7 @@ class FavoriteItem {
       id: json['id']?.toString() ?? '',
       title: json['title']?.toString() ?? 'Unknown Title',
       artist: json['artist']?.toString() ?? 'Unknown Artist',
-      album: json['album']?.toString() ?? '',
+      album: json['album']?.toString() ?? 'Unknown Album',
       artwork: json['artwork']?.toString() ?? '',
       streamUrl: json['streamUrl']?.toString() ?? '',
       durationMs: (json['durationMs'] as num?)?.toInt() ?? 0,
@@ -74,7 +74,7 @@ class FavoriteController extends StateNotifier<FavoriteState> {
     load();
   }
 
-  static const String _storageKey = 'aurora.favorite_items';
+  static const _storageKey = 'aurora.favorite_items';
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -84,22 +84,13 @@ class FavoriteController extends StateNotifier<FavoriteState> {
     for (final value in raw) {
       try {
         final decoded = jsonDecode(value);
-        if (decoded is Map && decoded['id'] != null) {
-          items.add(
-            FavoriteItem.fromJson(
-              Map<String, dynamic>.from(decoded),
-            ),
-          );
+        if (decoded is Map<String, dynamic> && decoded['id'] != null) {
+          items.add(FavoriteItem.fromJson(decoded));
         }
-      } catch (_) {
-        // Ignore malformed saved favorites.
-      }
+      } catch (_) {}
     }
 
-    state = FavoriteState(
-      items: items,
-      loading: false,
-    );
+    state = FavoriteState(items: items, loading: false);
   }
 
   bool isFavorite(String id) {
@@ -116,39 +107,23 @@ class FavoriteController extends StateNotifier<FavoriteState> {
       items.insert(0, item);
     }
 
-    state = state.copyWith(
-      items: items,
-      loading: false,
-    );
-
+    state = state.copyWith(items: items, loading: false);
     await _save(items);
   }
 
   Future<void> remove(String id) async {
-    final items = state.items
-        .where((item) => item.id != id)
-        .toList(growable: false);
-
-    state = state.copyWith(
-      items: items,
-      loading: false,
-    );
-
+    final items = state.items.where((item) => item.id != id).toList();
+    state = state.copyWith(items: items, loading: false);
     await _save(items);
   }
 
   Future<void> clear() async {
-    state = state.copyWith(
-      items: const [],
-      loading: false,
-    );
-
+    state = state.copyWith(items: const [], loading: false);
     await _save(const []);
   }
 
   Future<void> _save(List<FavoriteItem> items) async {
     final prefs = await SharedPreferences.getInstance();
-
     await prefs.setStringList(
       _storageKey,
       items.map((item) => jsonEncode(item.toJson())).toList(),
