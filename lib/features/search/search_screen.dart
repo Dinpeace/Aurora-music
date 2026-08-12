@@ -4,13 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/search_provider.dart';
 import '../../data/models/online/online_song.dart';
 import '../library/favorite_provider.dart';
-import '../player/player_controller.dart';
+import '../youtube_test/youtube_test_screen.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  ConsumerState<SearchScreen> createState() => _SearchScreenState();
+  ConsumerState<SearchScreen> createState() =>
+      _SearchScreenState();
 }
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
@@ -29,21 +30,33 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _search(String value) {
-    ref.read(searchControllerProvider.notifier).search(value);
+    ref
+        .read(searchControllerProvider.notifier)
+        .search(value);
   }
 
-  Future<void> _play(OnlineSong song, List<OnlineSong> queue) async {
-    try {
-      await ref.read(playerControllerProvider.notifier).playOnlineSong(
-            song,
-            queue: queue,
-          );
-    } catch (error) {
-      if (!mounted) return;
+  Future<void> _play(
+    OnlineSong song,
+    List<OnlineSong> queue,
+  ) async {
+    if (song.id.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to play this song: $error')),
+        const SnackBar(
+          content: Text(
+            'This song does not have a YouTube video ID.',
+          ),
+        ),
       );
+      return;
     }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => YoutubeTestScreen(
+          song: song,
+        ),
+      ),
+    );
   }
 
   @override
@@ -61,17 +74,27 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              padding: const EdgeInsets.fromLTRB(
+                20,
+                8,
+                20,
+                16,
+              ),
               child: TextField(
                 controller: _controller,
                 autofocus: true,
                 onChanged: _search,
                 onSubmitted: _search,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(
+                  color: Colors.white,
+                ),
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Search songs, artists, albums...',
-                  hintStyle: const TextStyle(color: Colors.white54),
+                  hintText:
+                      'Search songs, artists, albums...',
+                  hintStyle: const TextStyle(
+                    color: Colors.white54,
+                  ),
                   prefixIcon: const Icon(
                     Icons.search_rounded,
                     color: Colors.white54,
@@ -81,9 +104,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       : IconButton(
                           onPressed: () {
                             _controller.clear();
+
                             ref
-                                .read(searchControllerProvider.notifier)
+                                .read(
+                                  searchControllerProvider
+                                      .notifier,
+                                )
                                 .clear();
+
                             setState(() {});
                           },
                           icon: const Icon(
@@ -129,8 +157,11 @@ class _SearchBody extends StatelessWidget {
   final String? error;
   final String query;
   final List<OnlineSong> songs;
-  final Future<void> Function(OnlineSong song, List<OnlineSong> queue)
-      onSongTap;
+
+  final Future<void> Function(
+    OnlineSong song,
+    List<OnlineSong> queue,
+  ) onSongTap;
 
   @override
   Widget build(BuildContext context) {
@@ -147,7 +178,9 @@ class _SearchBody extends StatelessWidget {
           child: Text(
             error!,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white70),
+            style: const TextStyle(
+              color: Colors.white70,
+            ),
           ),
         ),
       );
@@ -157,7 +190,9 @@ class _SearchBody extends StatelessWidget {
       return const Center(
         child: Text(
           'Search for songs, artists, or albums',
-          style: TextStyle(color: Colors.white54),
+          style: TextStyle(
+            color: Colors.white54,
+          ),
         ),
       );
     }
@@ -166,20 +201,32 @@ class _SearchBody extends StatelessWidget {
       return const Center(
         child: Text(
           'No results found',
-          style: TextStyle(color: Colors.white54),
+          style: TextStyle(
+            color: Colors.white54,
+          ),
         ),
       );
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        32,
+      ),
       itemCount: songs.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 8),
+      separatorBuilder: (_, index) =>
+          const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final song = songs[index];
+
         return _SearchSongTile(
           song: song,
-          onTap: () => onSongTap(song, songs),
+          onTap: () => onSongTap(
+            song,
+            songs,
+          ),
         );
       },
     );
@@ -196,11 +243,17 @@ class _SearchSongTile extends ConsumerWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final hasArtwork = song.artwork.trim().isNotEmpty;
-    final isFavorite = ref.watch(favoriteProvider).items.any(
-          (item) => item.id == song.id,
-        );
+  Widget build(
+    BuildContext context,
+    WidgetRef ref,
+  ) {
+    final hasArtwork =
+        song.artwork.trim().isNotEmpty;
+
+    final isFavorite = ref
+        .watch(favoriteProvider)
+        .items
+        .any((item) => item.id == song.id);
 
     return Material(
       color: const Color(0xFF18181B),
@@ -220,39 +273,54 @@ class _SearchSongTile extends ConsumerWidget {
                         width: 58,
                         height: 58,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            _placeholder(),
+                        errorBuilder:
+                            (context, error, stackTrace) =>
+                                _placeholder(),
                       )
                     : _placeholder(),
               ),
+
               const SizedBox(width: 14),
+
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  mainAxisAlignment:
+                      MainAxisAlignment.center,
                   children: [
                     Text(
                       song.title,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      overflow:
+                          TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
+
                     const SizedBox(height: 4),
+
                     Text(
                       song.artist,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white60),
+                      overflow:
+                          TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white60,
+                      ),
                     ),
-                    if (song.album.trim().isNotEmpty) ...[
+
+                    if (song.album
+                        .trim()
+                        .isNotEmpty) ...[
                       const SizedBox(height: 2),
                       Text(
                         song.album,
                         maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        overflow:
+                            TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white38,
                           fontSize: 12,
@@ -262,13 +330,18 @@ class _SearchSongTile extends ConsumerWidget {
                   ],
                 ),
               ),
+
               IconButton(
                 tooltip: isFavorite
                     ? 'Remove from favorites'
                     : 'Add to favorites',
                 icon: Icon(
-                  isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: isFavorite ? Colors.redAccent : Colors.white70,
+                  isFavorite
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: isFavorite
+                      ? Colors.redAccent
+                      : Colors.white70,
                 ),
                 onPressed: () async {
                   final item = FavoriteItem(
@@ -278,12 +351,19 @@ class _SearchSongTile extends ConsumerWidget {
                     album: song.album,
                     artwork: song.artwork,
                     streamUrl: song.streamUrl,
-                    durationMs: song.duration.inMilliseconds,
+                    durationMs:
+                        song.duration.inMilliseconds,
                     isOnline: true,
                   );
-                  await ref.read(favoriteProvider.notifier).toggle(item);
+
+                  await ref
+                      .read(
+                        favoriteProvider.notifier,
+                      )
+                      .toggle(item);
                 },
               ),
+
               const Icon(
                 Icons.play_arrow_rounded,
                 color: Colors.white70,
@@ -299,10 +379,13 @@ class _SearchSongTile extends ConsumerWidget {
     return Container(
       width: 58,
       height: 58,
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(12)),
-        gradient: LinearGradient(
-          colors: [Color(0xFFA855F7), Color(0xFF22D3EE)],
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFA855F7),
+            Color(0xFF22D3EE),
+          ],
         ),
       ),
       child: const Icon(
