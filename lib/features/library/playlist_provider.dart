@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:aurora_music/features/library/favorite_provider.dart';
 
 class AuroraPlaylist {
@@ -43,15 +42,13 @@ class AuroraPlaylist {
 
   factory AuroraPlaylist.fromJson(Map<String, dynamic> json) {
     final songs = <FavoriteItem>[];
-    final rawSongs = json['songs'];
+    final raw = json['songs'];
 
-    if (rawSongs is List) {
-      for (final rawSong in rawSongs) {
-        if (rawSong is Map) {
+    if (raw is List) {
+      for (final item in raw) {
+        if (item is Map) {
           songs.add(
-            FavoriteItem.fromJson(
-              Map<String, dynamic>.from(rawSong),
-            ),
+            FavoriteItem.fromJson(Map<String, dynamic>.from(item)),
           );
         }
       }
@@ -94,27 +91,25 @@ class PlaylistController extends StateNotifier<PlaylistState> {
     load();
   }
 
-  static const _storageKey = 'aurora.playlists';
+  static const _key = 'aurora.playlists';
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_storageKey) ?? const <String>[];
     final playlists = <AuroraPlaylist>[];
 
-    for (final value in raw) {
+    for (final value in prefs.getStringList(_key) ?? const <String>[]) {
       try {
         final decoded = jsonDecode(value);
         if (decoded is Map) {
           final playlist = AuroraPlaylist.fromJson(
             Map<String, dynamic>.from(decoded),
           );
-
           if (playlist.id.isNotEmpty) {
             playlists.add(playlist);
           }
         }
       } catch (_) {
-        // Ignore one malformed playlist and continue loading the rest.
+        // Ignore malformed saved playlists.
       }
     }
 
@@ -125,37 +120,36 @@ class PlaylistController extends StateNotifier<PlaylistState> {
   }
 
   Future<void> create(String name) async {
-    final clean = name.trim();
-    if (clean.isEmpty) return;
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      return;
+    }
 
     final playlist = AuroraPlaylist(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
-      name: clean,
+      name: trimmedName,
       songs: const [],
       createdAt: DateTime.now(),
     );
 
-    final playlists = <AuroraPlaylist>[
-      playlist,
-      ...state.playlists,
-    ];
-
+    final playlists = [playlist, ...state.playlists];
     state = state.copyWith(
       playlists: playlists,
       loading: false,
     );
-
     await _save(playlists);
   }
 
   Future<void> rename(String id, String name) async {
-    final clean = name.trim();
-    if (clean.isEmpty) return;
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      return;
+    }
 
     final playlists = state.playlists
         .map(
           (playlist) => playlist.id == id
-              ? playlist.copyWith(name: clean)
+              ? playlist.copyWith(name: trimmedName)
               : playlist,
         )
         .toList(growable: false);
@@ -164,7 +158,6 @@ class PlaylistController extends StateNotifier<PlaylistState> {
       playlists: playlists,
       loading: false,
     );
-
     await _save(playlists);
   }
 
@@ -177,68 +170,54 @@ class PlaylistController extends StateNotifier<PlaylistState> {
       playlists: playlists,
       loading: false,
     );
-
     await _save(playlists);
   }
 
-  Future<void> addSong(
-    String playlistId,
-    FavoriteItem song,
-  ) async {
-    final playlists = state.playlists.map((playlist) {
-      if (playlist.id != playlistId) {
-        return playlist;
-      }
+  Future<void> addSong(String playlistId, FavoriteItem song) async {
+    final playlists = state.playlists
+        .map((playlist) {
+          if (playlist.id != playlistId ||
+              playlist.songs.any((item) => item.id == song.id)) {
+            return playlist;
+          }
 
-      if (playlist.songs.any((existing) => existing.id == song.id)) {
-        return playlist;
-      }
-
-      return playlist.copyWith(
-        songs: [
-          ...playlist.songs,
-          song,
-        ],
-      );
-    }).toList(growable: false);
+          return playlist.copyWith(
+            songs: [...playlist.songs, song],
+          );
+        })
+        .toList(growable: false);
 
     state = state.copyWith(
       playlists: playlists,
       loading: false,
     );
-
     await _save(playlists);
   }
 
-  Future<void> removeSong(
-    String playlistId,
-    String songId,
-  ) async {
-    final playlists = state.playlists.map((playlist) {
-      if (playlist.id != playlistId) {
-        return playlist;
-      }
-
-      return playlist.copyWith(
-        songs: playlist.songs
-            .where((song) => song.id != songId)
-            .toList(growable: false),
-      );
-    }).toList(growable: false);
+  Future<void> removeSong(String playlistId, String songId) async {
+    final playlists = state.playlists
+        .map(
+          (playlist) => playlist.id == playlistId
+              ? playlist.copyWith(
+                  songs: playlist.songs
+                      .where((song) => song.id != songId)
+                      .toList(growable: false),
+                )
+              : playlist,
+        )
+        .toList(growable: false);
 
     state = state.copyWith(
       playlists: playlists,
       loading: false,
     );
-
     await _save(playlists);
   }
 
   Future<void> _save(List<AuroraPlaylist> playlists) async {
     final prefs = await SharedPreferences.getInstance();
-
     await prefs.setStringList(
-      _storageKey,
+      _key,
       playlists
           .map((playlist) => jsonEncode(playlist.toJson()))
           .toList(growable: false),

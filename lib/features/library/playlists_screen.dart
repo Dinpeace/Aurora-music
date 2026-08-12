@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:aurora_music/features/library/playlist_provider.dart';
 
 class PlaylistsScreen extends ConsumerWidget {
@@ -16,90 +15,58 @@ class PlaylistsScreen extends ConsumerWidget {
         title: const Text('Playlists'),
         backgroundColor: const Color(0xFF09090B),
         foregroundColor: Colors.white,
-        elevation: 0,
         actions: [
           IconButton(
-            tooltip: 'Create playlist',
-            icon: const Icon(Icons.add_rounded),
-            onPressed: () => _createPlaylist(context, ref),
+            icon: const Icon(Icons.add),
+            onPressed: () => _create(context, ref),
           ),
         ],
       ),
       body: state.loading
           ? const Center(child: CircularProgressIndicator())
           : state.playlists.isEmpty
-              ? _EmptyPlaylists(
-                  onCreate: () => _createPlaylist(context, ref),
-                )
+              ? _Empty(onCreate: () => _create(context, ref))
               : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                  padding: const EdgeInsets.all(16),
                   itemCount: state.playlists.length,
-                  separatorBuilder: (_, index) => const Divider(
-                    color: Color(0xFF27272A),
-                    height: 1,
-                  ),
+                  separatorBuilder: (context, index) =>
+                      const Divider(color: Color(0xFF27272A)),
                   itemBuilder: (context, index) {
                     final playlist = state.playlists[index];
 
                     return ListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(vertical: 5),
-                      leading: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFA855F7),
-                              Color(0xFF22D3EE),
-                            ],
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.queue_music_rounded,
-                          color: Colors.white,
-                        ),
+                      leading: const Icon(
+                        Icons.queue_music,
+                        color: Color(0xFFA855F7),
                       ),
                       title: Text(
                         playlist.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: const TextStyle(color: Colors.white),
                       ),
                       subtitle: Text(
-                        '${playlist.songs.length} ${playlist.songs.length == 1 ? 'song' : 'songs'}',
+                        '${playlist.songs.length} songs',
                         style: const TextStyle(color: Colors.white60),
                       ),
-                      onTap: () => _openPlaylist(
-                        context,
-                        playlist.id,
-                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PlaylistDetailScreen(
+                              playlistId: playlist.id,
+                            ),
+                          ),
+                        );
+                      },
                       trailing: PopupMenuButton<String>(
                         color: const Color(0xFF27272A),
-                        onSelected: (value) async {
-                          if (value == 'rename') {
-                            await _renamePlaylist(
-                              context,
-                              ref,
-                              playlist.id,
-                              playlist.name,
-                            );
-                          } else if (value == 'delete') {
-                            await ref
+                        onSelected: (value) {
+                          if (value == 'delete') {
+                            ref
                                 .read(playlistProvider.notifier)
                                 .delete(playlist.id);
                           }
                         },
                         itemBuilder: (context) => const [
-                          PopupMenuItem(
-                            value: 'rename',
-                            child: Text(
-                              'Rename',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
                           PopupMenuItem(
                             value: 'delete',
                             child: Text(
@@ -115,10 +82,7 @@ class PlaylistsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _createPlaylist(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
+  Future<void> _create(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController();
 
     final name = await showDialog<String>(
@@ -131,15 +95,9 @@ class PlaylistsScreen extends ConsumerWidget {
         ),
         content: TextField(
           controller: controller,
-          autofocus: true,
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
             hintText: 'Playlist name',
-            hintStyle: TextStyle(color: Colors.white38),
-          ),
-          onSubmitted: (value) => Navigator.pop(
-            dialogContext,
-            value.trim(),
           ),
         ),
         actions: [
@@ -148,9 +106,6 @@ class PlaylistsScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFA855F7),
-            ),
             onPressed: () => Navigator.pop(
               dialogContext,
               controller.text.trim(),
@@ -163,70 +118,9 @@ class PlaylistsScreen extends ConsumerWidget {
 
     controller.dispose();
 
-    if (name != null && name.trim().isNotEmpty) {
+    if (name != null) {
       await ref.read(playlistProvider.notifier).create(name);
     }
-  }
-
-  Future<void> _renamePlaylist(
-    BuildContext context,
-    WidgetRef ref,
-    String id,
-    String currentName,
-  ) async {
-    final controller = TextEditingController(text: currentName);
-
-    final name = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF18181B),
-        title: const Text(
-          'Rename playlist',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          style: const TextStyle(color: Colors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFA855F7),
-            ),
-            onPressed: () => Navigator.pop(
-              dialogContext,
-              controller.text.trim(),
-            ),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-
-    controller.dispose();
-
-    if (name != null && name.trim().isNotEmpty) {
-      await ref.read(playlistProvider.notifier).rename(id, name);
-    }
-  }
-
-  void _openPlaylist(
-    BuildContext context,
-    String playlistId,
-  ) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PlaylistDetailScreen(
-          playlistId: playlistId,
-        ),
-      ),
-    );
   }
 }
 
@@ -241,8 +135,8 @@ class PlaylistDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(playlistProvider);
-
     AuroraPlaylist? playlist;
+
     for (final item in state.playlists) {
       if (item.id == playlistId) {
         playlist = item;
@@ -262,17 +156,16 @@ class PlaylistDetailScreen extends ConsumerWidget {
       );
     }
 
-    final selectedPlaylist = playlist;
+    final currentPlaylist = playlist;
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
       appBar: AppBar(
-        title: Text(selectedPlaylist.name),
+        title: Text(currentPlaylist.name),
         backgroundColor: const Color(0xFF09090B),
         foregroundColor: Colors.white,
-        elevation: 0,
       ),
-      body: selectedPlaylist.songs.isEmpty
+      body: currentPlaylist.songs.isEmpty
           ? const Center(
               child: Text(
                 'No songs in this playlist yet.',
@@ -280,133 +173,69 @@ class PlaylistDetailScreen extends ConsumerWidget {
               ),
             )
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              itemCount: selectedPlaylist.songs.length,
-              separatorBuilder: (_, index) => const Divider(
-                color: Color(0xFF27272A),
-                height: 1,
-              ),
+              padding: const EdgeInsets.all(16),
+              itemCount: currentPlaylist.songs.length,
+              separatorBuilder: (context, index) =>
+                  const Divider(color: Color(0xFF27272A)),
               itemBuilder: (context, index) {
-                final song = selectedPlaylist.songs[index];
+                final song = currentPlaylist.songs[index];
 
                 return ListTile(
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 4),
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: song.artwork.isNotEmpty
-                        ? Image.network(
-                            song.artwork,
-                            width: 56,
-                            height: 56,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (context, error, stackTrace) =>
-                                    _placeholder(),
-                          )
-                        : _placeholder(),
-                  ),
                   title: Text(
                     song.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(color: Colors.white),
                   ),
                   subtitle: Text(
                     song.artist,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Colors.white60),
                   ),
                   trailing: IconButton(
-                    tooltip: 'Remove',
                     icon: const Icon(
                       Icons.remove_circle_outline,
                       color: Colors.white54,
                     ),
                     onPressed: () => ref
                         .read(playlistProvider.notifier)
-                        .removeSong(
-                          selectedPlaylist.id,
-                          song.id,
-                        ),
+                        .removeSong(currentPlaylist.id, song.id),
                   ),
                 );
               },
             ),
     );
   }
-
-  Widget _placeholder() {
-    return Container(
-      width: 56,
-      height: 56,
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.all(Radius.circular(12)),
-        gradient: LinearGradient(
-          colors: [
-            Color(0xFFA855F7),
-            Color(0xFF22D3EE),
-          ],
-        ),
-      ),
-      child: const Icon(
-        Icons.music_note_rounded,
-        color: Colors.white,
-      ),
-    );
-  }
 }
 
-class _EmptyPlaylists extends StatelessWidget {
-  const _EmptyPlaylists({
-    required this.onCreate,
-  });
+class _Empty extends StatelessWidget {
+  const _Empty({required this.onCreate});
 
   final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.queue_music_rounded,
-              color: Color(0xFFA855F7),
-              size: 64,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(
+            Icons.queue_music,
+            color: Color(0xFFA855F7),
+            size: 64,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No playlists yet',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'No playlists yet',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Create a playlist to organize your music.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white60),
-            ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFA855F7),
-              ),
-              onPressed: onCreate,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('Create playlist'),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: onCreate,
+            icon: const Icon(Icons.add),
+            label: const Text('Create playlist'),
+          ),
+        ],
       ),
     );
   }
