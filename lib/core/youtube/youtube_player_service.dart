@@ -14,18 +14,14 @@ class YoutubePlayerService {
             mute: false,
             privacyEnhancedMode: true,
             playsInline: true,
+            enableJavaScript: true,
+            enableCaption: true,
+            videoStateUpdateInterval: 100,
           ),
-        ) {
-    _valueSubscription = controller.stream.listen(
-      _handleValue,
-    );
-  }
+        );
 
   final YoutubePlayerController controller;
   final bool _autoPlay;
-
-  late final StreamSubscription<YoutubePlayerValue>
-      _valueSubscription;
 
   bool _disposed = false;
 
@@ -40,24 +36,24 @@ class YoutubePlayerService {
       controller.videoStateStream;
 
   // ---------------------------------------------------------------------------
-  // LOAD VIDEO
+  // LOAD
   // ---------------------------------------------------------------------------
 
   Future<void> load(String videoId) async {
     _checkDisposed();
 
-    final id = videoId.trim();
+    final id = _extractVideoId(videoId);
 
-    if (id.isEmpty) {
+    if (id == null) {
       throw ArgumentError.value(
         videoId,
         'videoId',
-        'YouTube video ID cannot be empty.',
+        'Invalid YouTube video ID or URL.',
       );
     }
 
     debugPrint(
-      'Aurora YouTube: loading video $id',
+      'Aurora YouTube: loading [$id]',
     );
 
     try {
@@ -65,79 +61,119 @@ class YoutubePlayerService {
         await controller.loadVideoById(
           videoId: id,
         );
-
-        debugPrint(
-          'Aurora YouTube: loadVideoById completed',
-        );
       } else {
         await controller.cueVideoById(
           videoId: id,
         );
-
-        debugPrint(
-          'Aurora YouTube: video cued',
-        );
       }
 
       if (_disposed) {
         return;
       }
-
-      await _waitForPlayerState();
-
-      if (_disposed) {
-        return;
-      }
-
-      final currentState =
-          controller.value.playerState;
 
       debugPrint(
-        'Aurora YouTube: player state after load: '
-        '$currentState',
+        'Aurora YouTube: video command completed [$id]',
       );
 
-      if (controller.value.hasError) {
+      await _waitUntilReady();
+
+      if (_disposed) {
+        return;
+      }
+
+      final value = controller.value;
+
+      debugPrint(
+        'Aurora YouTube: '
+        'state=${value.playerState} '
+        'videoId=${value.metaData.videoId} '
+        'error=${value.hasError ? value.error : 'none'}',
+      );
+
+      if (value.hasError) {
         throw StateError(
-          'YouTube player reported error: '
-          '${controller.value.error}',
+          'YouTube player reported error: ${value.error}',
         );
       }
     } catch (error, stackTrace) {
       debugPrint(
-        'Aurora YouTube: load failed: $error',
+        'Aurora YouTube: failed to load [$id]: $error',
       );
 
       debugPrintStack(
         stackTrace: stackTrace,
       );
 
-      throw StateError(
-        'YouTube playback failed for "$id": $error',
-      );
+      rethrow;
     }
   }
 
   // ---------------------------------------------------------------------------
-  // WAIT FOR PLAYER STATE
+  // VIDEO ID EXTRACTION
   // ---------------------------------------------------------------------------
 
-  Future<void> _waitForPlayerState() async {
-    const timeout = Duration(seconds: 8);
+  String? _extractVideoId(String input) {
+    final value = input.trim();
+
+    if (value.isEmpty) {
+      return null;
+    }
+
+    // Already a normal YouTube ID.
+    final idPattern = RegExp(
+      r'^[A-Za-z0-9_-]{11}$',
+    );
+
+    if (idPattern.hasMatch(value)) {
+      return value;
+    }
+
+    // Accept full YouTube URLs as well.
+    final converted =
+        YoutubePlayerController.convertUrlToId(
+      value,
+    );
+
+    if (converted == null) {
+      return null;
+    }
+
+    final id = converted.trim();
+
+    if (!idPattern.hasMatch(id)) {
+      return null;
+    }
+
+    return id;
+  }
+
+  // ---------------------------------------------------------------------------
+  // WAIT UNTIL YOUTUBE RESPONDS
+  // ---------------------------------------------------------------------------
+
+  Future<void> _waitUntilReady() async {
+    final current = controller.value;
+
+    if (current.hasError) {
+      return;
+    }
+
+    if (current.playerState != PlayerState.unknown) {
+      return;
+    }
 
     final completer = Completer<void>();
 
-    late StreamSubscription<YoutubePlayerValue>
-        subscription;
+    late StreamSubscription<YoutubePlayerValue> subscription;
 
-    Timer? timer;
+    Timer? timeout;
 
     void finish() {
       if (completer.isCompleted) {
         return;
       }
 
-      timer?.cancel();
+      timeout?.cancel();
       subscription.cancel();
 
       completer.complete();
@@ -150,37 +186,26 @@ class YoutubePlayerService {
           return;
         }
 
-        /*
-         * UNKNOWN means the iframe hasn't reported a useful
-         * player state yet.
-         *
-         * Any other state means YouTube has responded.
-         */
-        if (value.playerState !=
-            PlayerState.unknown) {
+        if (value.playerState != PlayerState.unknown) {
           finish();
         }
       },
     );
 
-    timer = Timer(
-      timeout,
+    timeout = Timer(
+      const Duration(seconds: 10),
       finish,
     );
 
-    /*
-     * Check the current state immediately.
-     */
-    final current =
-        controller.value;
+    try {
+      await completer.future;
+    } finally {
+      timeout.cancel();
 
-    if (current.hasError ||
-        current.playerState !=
-            PlayerState.unknown) {
-      finish();
+      if (!completer.isCompleted) {
+        await subscription.cancel();
+      }
     }
-
-    await completer.future;
   }
 
   // ---------------------------------------------------------------------------
@@ -218,16 +243,13 @@ class YoutubePlayerService {
   Future<void> togglePlayPause() async {
     _checkDisposed();
 
-    final currentState =
-        controller.value.playerState;
+    final state = controller.value.playerState;
 
     debugPrint(
-      'Aurora YouTube: toggle '
-      'current=$currentState',
+      'Aurora YouTube: toggle state=$state',
     );
 
-    if (currentState ==
-        PlayerState.playing) {
+    if (state == PlayerState.playing) {
       await controller.pauseVideo();
     } else {
       await controller.playVideo();
@@ -238,16 +260,22 @@ class YoutubePlayerService {
   // SEEK
   // ---------------------------------------------------------------------------
 
-  Future<void> seek(
-    Duration position,
-  ) async {
+  Future<void> seek(Duration position) async {
     _checkDisposed();
 
-    final seconds =
+    var seconds =
         position.inMilliseconds / 1000.0;
 
     if (seconds < 0) {
-      return;
+      seconds = 0;
+    }
+
+    final duration = await getDuration();
+
+    if (duration > Duration.zero &&
+        position > duration) {
+      seconds =
+          duration.inMilliseconds / 1000.0;
     }
 
     debugPrint(
@@ -271,9 +299,7 @@ class YoutubePlayerService {
     final seconds =
         await controller.currentTime;
 
-    if (seconds.isNaN ||
-        seconds.isInfinite ||
-        seconds < 0) {
+    if (!seconds.isFinite || seconds < 0) {
       return Duration.zero;
     }
 
@@ -293,9 +319,7 @@ class YoutubePlayerService {
     final seconds =
         await controller.duration;
 
-    if (seconds.isNaN ||
-        seconds.isInfinite ||
-        seconds <= 0) {
+    if (!seconds.isFinite || seconds <= 0) {
       return Duration.zero;
     }
 
@@ -303,6 +327,40 @@ class YoutubePlayerService {
       milliseconds:
           (seconds * 1000).round(),
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // STOP / RESET
+  // ---------------------------------------------------------------------------
+
+  Future<void> stop() async {
+    _checkDisposed();
+
+    debugPrint(
+      'Aurora YouTube: stop',
+    );
+
+    await controller.stopVideo();
+  }
+
+  // ---------------------------------------------------------------------------
+  // MUTE
+  // ---------------------------------------------------------------------------
+
+  Future<void> mute() async {
+    _checkDisposed();
+
+    await controller.mute();
+  }
+
+  // ---------------------------------------------------------------------------
+  // UNMUTE
+  // ---------------------------------------------------------------------------
+
+  Future<void> unMute() async {
+    _checkDisposed();
+
+    await controller.unMute();
   }
 
   // ---------------------------------------------------------------------------
@@ -319,25 +377,19 @@ class YoutubePlayerService {
       controller.value.playerState ==
       PlayerState.playing;
 
+  bool get isPaused =>
+      controller.value.playerState ==
+      PlayerState.paused;
+
+  bool get isBuffering =>
+      controller.value.playerState ==
+      PlayerState.buffering;
+
   bool get hasError =>
       controller.value.hasError;
 
   YoutubeError get error =>
       controller.value.error;
-
-  // ---------------------------------------------------------------------------
-  // DEBUG
-  // ---------------------------------------------------------------------------
-
-  void _handleValue(
-    YoutubePlayerValue value,
-  ) {
-    debugPrint(
-      'Aurora YouTube: '
-      'state=${value.playerState} '
-      'error=${value.hasError ? value.error : "none"}',
-    );
-  }
 
   // ---------------------------------------------------------------------------
   // DISPOSE
@@ -362,7 +414,6 @@ class YoutubePlayerService {
       'Aurora YouTube: disposing',
     );
 
-    await _valueSubscription.cancel();
     await controller.close();
   }
 }

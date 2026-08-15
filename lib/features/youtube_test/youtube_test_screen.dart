@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
@@ -20,9 +22,14 @@ class YoutubeTestScreen extends StatefulWidget {
 class _YoutubeTestScreenState
     extends State<YoutubeTestScreen> {
   late final YoutubePlayerService _youtube;
+  late final Timer _positionTimer;
 
   bool _loading = true;
+  bool _playing = false;
   String? _error;
+
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
 
   @override
   void initState() {
@@ -30,6 +37,11 @@ class _YoutubeTestScreenState
 
     _youtube = YoutubePlayerService(
       autoPlay: true,
+    );
+
+    _positionTimer = Timer.periodic(
+      const Duration(milliseconds: 500),
+      (_) => _updatePosition(),
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -45,38 +57,46 @@ class _YoutubeTestScreenState
 
       setState(() {
         _loading = false;
+        _playing = false;
         _error = 'This song has no YouTube video ID.';
       });
 
       return;
     }
 
-    if (!mounted) return;
-
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _playing = false;
+        _error = null;
+        _position = Duration.zero;
+        _duration = Duration.zero;
+      });
+    }
 
     try {
       debugPrint(
-        'Aurora Test Player: loading $videoId',
+        'Aurora Player: loading $videoId',
       );
 
       await _youtube.load(videoId);
+
+      final duration = await _youtube.getDuration();
 
       if (!mounted) return;
 
       setState(() {
         _loading = false;
+        _playing = _youtube.isPlaying;
+        _duration = duration;
       });
 
       debugPrint(
-        'Aurora Test Player: loaded $videoId',
+        'Aurora Player: loaded $videoId',
       );
     } catch (error, stackTrace) {
       debugPrint(
-        'Aurora Test Player error: $error',
+        'Aurora Player error: $error',
       );
 
       debugPrintStack(
@@ -87,28 +107,56 @@ class _YoutubeTestScreenState
 
       setState(() {
         _loading = false;
+        _playing = false;
         _error = error.toString();
       });
+    }
+  }
+
+  Future<void> _updatePosition() async {
+    if (!mounted || _loading) return;
+
+    try {
+      final position =
+          await _youtube.getCurrentPosition();
+
+      final duration =
+          await _youtube.getDuration();
+
+      if (!mounted) return;
+
+      setState(() {
+        _position = position;
+        if (duration > Duration.zero) {
+          _duration = duration;
+        }
+
+        _playing = _youtube.isPlaying;
+      });
+    } catch (_) {
+      // Ignore temporary iframe/player state errors.
     }
   }
 
   Future<void> _togglePlayPause() async {
     try {
       await _youtube.togglePlayPause();
+
+      if (!mounted) return;
+
+      setState(() {
+        _playing = _youtube.isPlaying;
+      });
     } catch (error, stackTrace) {
       debugPrint(
-        'Aurora Test Player toggle error: $error',
+        'Aurora Player toggle error: $error',
       );
 
       debugPrintStack(
         stackTrace: stackTrace,
       );
 
-      if (!mounted) return;
-
-      setState(() {
-        _error = error.toString();
-      });
+      _showError(error);
     }
   }
 
@@ -125,6 +173,8 @@ class _YoutubeTestScreenState
             ? Duration.zero
             : target,
       );
+
+      await _updatePosition();
     } catch (error) {
       _showError(error);
     }
@@ -146,6 +196,28 @@ class _YoutubeTestScreenState
             ? duration
             : target,
       );
+
+      await _updatePosition();
+    } catch (error) {
+      _showError(error);
+    }
+  }
+
+  Future<void> _seekTo(double value) async {
+    try {
+      await _youtube.seek(
+        Duration(
+          milliseconds: value.round(),
+        ),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _position = Duration(
+          milliseconds: value.round(),
+        );
+      });
     } catch (error) {
       _showError(error);
     }
@@ -159,9 +231,33 @@ class _YoutubeTestScreenState
     });
   }
 
+  String _formatDuration(Duration duration) {
+    if (duration <= Duration.zero) {
+      return '0:00';
+    }
+
+    final minutes = duration.inMinutes;
+    final seconds = duration.inSeconds % 60;
+
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final song = widget.song;
+
+    final durationMs =
+        _duration.inMilliseconds.toDouble();
+
+    final positionMs =
+        _position.inMilliseconds
+            .clamp(
+              0,
+              durationMs > 0 ? durationMs : 0,
+            )
+            .toDouble();
+
+    final hasDuration = durationMs > 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
@@ -169,6 +265,7 @@ class _YoutubeTestScreenState
         backgroundColor: const Color(0xFF09090B),
         foregroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
         title: const Text(
           'Now Playing',
           style: TextStyle(
@@ -177,283 +274,266 @@ class _YoutubeTestScreenState
         ),
       ),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            const SizedBox(height: 16),
-
-            // ---------------------------------------------------------------
-            // YOUTUBE PLAYER
-            // ---------------------------------------------------------------
-
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
+            SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                24,
+                18,
+                24,
+                36,
               ),
-              child: ClipRRect(
-                borderRadius:
-                    BorderRadius.circular(18),
-                child: YoutubePlayer(
-                  controller: _youtube.controller,
-                  aspectRatio: 16 / 9,
-                  autoFullScreen: true,
-                  keepAlive: true,
-                ),
-              ),
-            ),
+              child: Column(
+                children: [
+                  _buildArtwork(song),
 
-            const SizedBox(height: 24),
+                  const SizedBox(height: 28),
 
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  0,
-                  20,
-                  32,
-                ),
-                child: Column(
-                  children: [
-                    // -------------------------------------------------------
-                    // ARTWORK
-                    // -------------------------------------------------------
-
-                    _buildArtwork(song),
-
-                    const SizedBox(height: 22),
-
-                    // -------------------------------------------------------
-                    // TITLE
-                    // -------------------------------------------------------
-
-                    Text(
-                      song.title,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow:
-                          TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 23,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  Text(
+                    song.title,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
                     ),
+                  ),
 
-                    const SizedBox(height: 7),
+                  const SizedBox(height: 8),
 
-                    // -------------------------------------------------------
-                    // ARTIST
-                    // -------------------------------------------------------
+                  Text(
+                    song.artist,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white60,
+                      fontSize: 16,
+                    ),
+                  ),
 
+                  if (song.album.trim().isNotEmpty) ...[
+                    const SizedBox(height: 5),
                     Text(
-                      song.artist,
+                      song.album,
                       textAlign: TextAlign.center,
                       maxLines: 1,
-                      overflow:
-                          TextOverflow.ellipsis,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white60,
-                        fontSize: 15,
-                      ),
-                    ),
-
-                    if (song.album
-                        .trim()
-                        .isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        song.album,
-                        textAlign:
-                            TextAlign.center,
-                        maxLines: 1,
-                        overflow:
-                            TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white38,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: 24),
-
-                    // -------------------------------------------------------
-                    // PLAYER STATE
-                    // -------------------------------------------------------
-
-                    YoutubeValueBuilder(
-                      controller: _youtube.controller,
-                      builder: (
-                        context,
-                        value,
-                      ) {
-                        final isPlaying =
-                            value.playerState ==
-                                PlayerState.playing;
-
-                        final isBuffering =
-                            value.playerState ==
-                                PlayerState.buffering;
-
-                        final hasError =
-                            value.hasError;
-
-                        if (hasError) {
-                          return _buildPlayerError(
-                            value.error.toString(),
-                          );
-                        }
-
-                        return Column(
-                          children: [
-                            if (_loading ||
-                                isBuffering)
-                              const Padding(
-                                padding:
-                                    EdgeInsets.only(
-                                  bottom: 16,
-                                ),
-                                child:
-                                    CircularProgressIndicator(
-                                  color:
-                                      Colors.white,
-                                ),
-                              ),
-
-                            if (_error != null)
-                              _buildPlayerError(
-                                _error!,
-                              ),
-
-                            const SizedBox(
-                              height: 8,
-                            ),
-
-                            // -------------------------------------------------
-                            // CUSTOM CONTROLS
-                            // -------------------------------------------------
-
-                            Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment
-                                      .center,
-                              children: [
-                                IconButton(
-                                  onPressed:
-                                      _loading
-                                          ? null
-                                          : _seekBackward,
-                                  iconSize: 34,
-                                  color: Colors.white,
-                                  icon: const Icon(
-                                    Icons
-                                        .replay_10_rounded,
-                                  ),
-                                ),
-
-                                const SizedBox(
-                                  width: 22,
-                                ),
-
-                                Container(
-                                  width: 68,
-                                  height: 68,
-                                  decoration:
-                                      const BoxDecoration(
-                                    shape:
-                                        BoxShape.circle,
-                                    gradient:
-                                        LinearGradient(
-                                      colors: [
-                                        Color(
-                                          0xFFA855F7,
-                                        ),
-                                        Color(
-                                          0xFF22D3EE,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  child:
-                                      IconButton(
-                                    onPressed:
-                                        _loading
-                                            ? null
-                                            : _togglePlayPause,
-                                    iconSize: 36,
-                                    color:
-                                        Colors.white,
-                                    icon: Icon(
-                                      isPlaying
-                                          ? Icons
-                                              .pause_rounded
-                                          : Icons
-                                              .play_arrow_rounded,
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(
-                                  width: 22,
-                                ),
-
-                                IconButton(
-                                  onPressed:
-                                      _loading
-                                          ? null
-                                          : _seekForward,
-                                  iconSize: 34,
-                                  color: Colors.white,
-                                  icon: const Icon(
-                                    Icons
-                                        .forward_10_rounded,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // -------------------------------------------------------
-                    // RELOAD
-                    // -------------------------------------------------------
-
-                    OutlinedButton.icon(
-                      onPressed:
-                          _loading
-                              ? null
-                              : _loadSong,
-                      icon: const Icon(
-                        Icons.refresh_rounded,
-                      ),
-                      label: const Text(
-                        'Reload video',
-                      ),
-                      style:
-                          OutlinedButton.styleFrom(
-                        foregroundColor:
-                            Colors.white,
-                        side: const BorderSide(
-                          color: Colors.white24,
-                        ),
-                        padding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        shape:
-                            RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(
-                            14,
-                          ),
-                        ),
+                        color: Colors.white38,
+                        fontSize: 13,
                       ),
                     ),
                   ],
+
+                  const SizedBox(height: 34),
+
+                  // -------------------------------------------------------
+                  // AURORA PROGRESS BAR
+                  // -------------------------------------------------------
+
+                  if (hasDuration)
+                    Column(
+                      children: [
+                        SliderTheme(
+                          data: SliderTheme.of(context).copyWith(
+                            trackHeight: 3,
+                            thumbShape:
+                                const RoundSliderThumbShape(
+                              enabledThumbRadius: 6,
+                            ),
+                            overlayShape:
+                                const RoundSliderOverlayShape(
+                              overlayRadius: 16,
+                            ),
+                            activeTrackColor:
+                                const Color(0xFFA855F7),
+                            inactiveTrackColor:
+                                Colors.white12,
+                            thumbColor:
+                                const Color(0xFF22D3EE),
+                            overlayColor:
+                                const Color(0x3322D3EE),
+                          ),
+                          child: Slider(
+                            value: positionMs,
+                            min: 0,
+                            max: durationMs,
+                            onChanged: _loading
+                                ? null
+                                : _seekTo,
+                          ),
+                        ),
+                        Padding(
+                          padding:
+                              const EdgeInsets.symmetric(
+                            horizontal: 4,
+                          ),
+                          child: Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _formatDuration(_position),
+                                style: const TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                _formatDuration(_duration),
+                                style: const TextStyle(
+                                  color: Colors.white38,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                  const SizedBox(height: 28),
+
+                  // -------------------------------------------------------
+                  // AURORA CONTROLS
+                  // -------------------------------------------------------
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        onPressed:
+                            _loading ? null : _seekBackward,
+                        iconSize: 34,
+                        color: Colors.white,
+                        icon: const Icon(
+                          Icons.replay_10_rounded,
+                        ),
+                      ),
+
+                      const SizedBox(width: 28),
+
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFFA855F7),
+                              Color(0xFF22D3EE),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: IconButton(
+                          onPressed:
+                              _loading
+                                  ? null
+                                  : _togglePlayPause,
+                          iconSize: 38,
+                          color: Colors.white,
+                          icon: Icon(
+                            _playing
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 28),
+
+                      IconButton(
+                        onPressed:
+                            _loading ? null : _seekForward,
+                        iconSize: 34,
+                        color: Colors.white,
+                        icon: const Icon(
+                          Icons.forward_10_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  if (_loading)
+                    const Column(
+                      children: [
+                        SizedBox(height: 4),
+                        CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Loading song...',
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                  if (_error != null) ...[
+                    const SizedBox(height: 18),
+                    _buildPlayerError(_error!),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  OutlinedButton.icon(
+                    onPressed:
+                        _loading ? null : _loadSong,
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                    ),
+                    label: const Text(
+                      'Reload',
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      side: const BorderSide(
+                        color: Colors.white12,
+                      ),
+                      padding:
+                          const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape:
+                          RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // -------------------------------------------------------------
+            // HIDDEN YOUTUBE PLAYBACK SURFACE
+            //
+            // The YouTube iframe remains mounted so the existing working
+            // playback engine continues to work. Aurora owns the visible UI.
+            // -------------------------------------------------------------
+
+            Positioned(
+              left: 0,
+              top: 0,
+              child: IgnorePointer(
+                child: SizedBox(
+                  width: 1,
+                  height: 1,
+                  child: YoutubePlayer(
+                    controller: _youtube.controller,
+                  ),
                 ),
               ),
             ),
@@ -470,40 +550,43 @@ class _YoutubeTestScreenState
       return _artworkPlaceholder();
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(18),
-      child: Image.network(
-        artwork,
-        width: 220,
-        height: 220,
-        fit: BoxFit.cover,
-        filterQuality: FilterQuality.medium,
-        errorBuilder: (
-          context,
-          error,
-          stackTrace,
-        ) {
-          return _artworkPlaceholder();
-        },
-        loadingBuilder: (
-          context,
-          child,
-          loadingProgress,
-        ) {
-          if (loadingProgress == null) {
-            return child;
-          }
+    return Hero(
+      tag: 'aurora-artwork-${song.id}',
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Image.network(
+          artwork,
+          width: 300,
+          height: 300,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.high,
+          errorBuilder: (
+            context,
+            error,
+            stackTrace,
+          ) {
+            return _artworkPlaceholder();
+          },
+          loadingBuilder: (
+            context,
+            child,
+            loadingProgress,
+          ) {
+            if (loadingProgress == null) {
+              return child;
+            }
 
-          return _artworkPlaceholder();
-        },
+            return _artworkPlaceholder();
+          },
+        ),
       ),
     );
   }
 
   Widget _artworkPlaceholder() {
     return Container(
-      width: 220,
-      height: 220,
+      width: 300,
+      height: 300,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -517,7 +600,7 @@ class _YoutubeTestScreenState
       child: const Icon(
         Icons.music_note_rounded,
         color: Colors.white,
-        size: 76,
+        size: 86,
       ),
     );
   }
@@ -528,11 +611,11 @@ class _YoutubeTestScreenState
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: const Color(0xFF3B1010),
-        borderRadius:
-            BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Colors.redAccent
-              .withValues(alpha: 0.35),
+          color: Colors.redAccent.withValues(
+            alpha: 0.35,
+          ),
         ),
       ),
       child: Column(
@@ -557,6 +640,7 @@ class _YoutubeTestScreenState
 
   @override
   void dispose() {
+    _positionTimer.cancel();
     _youtube.dispose();
     super.dispose();
   }
