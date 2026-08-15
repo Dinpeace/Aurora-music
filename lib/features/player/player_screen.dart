@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:youtube_player_iframe/youtube_player_iframe.dart';
 
 import 'player_controller.dart';
 import 'widgets/player_artwork.dart';
@@ -13,6 +14,7 @@ class PlayerScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(playerControllerProvider);
+    final controller = ref.read(playerControllerProvider.notifier);
     final song = player.currentSong;
 
     return Scaffold(
@@ -23,6 +25,9 @@ class PlayerScreen extends ConsumerWidget {
             : _NowPlayingContent(
                 title: song.title,
                 artist: song.artist,
+                youtubeController: controller.usesYoutubePlayer
+                    ? controller.youtubeController
+                    : null,
               ),
       ),
     );
@@ -63,10 +68,7 @@ class _NothingPlaying extends StatelessWidget {
                   Text(
                     'Choose a song from Search or your Library.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white54,
-                      fontSize: 15,
-                    ),
+                    style: TextStyle(color: Colors.white54, fontSize: 15),
                   ),
                 ],
               ),
@@ -82,32 +84,40 @@ class _NowPlayingContent extends StatelessWidget {
   const _NowPlayingContent({
     required this.title,
     required this.artist,
+    this.youtubeController,
   });
 
   final String title;
   final String artist;
+  final YoutubePlayerController? youtubeController;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final artworkSize = (constraints.maxWidth - 48).clamp(
-          220.0,
-          380.0,
-        );
+        final artworkSize = (constraints.maxWidth - 48).clamp(220.0, 380.0);
 
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
           child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: constraints.maxHeight - 16,
-            ),
+            constraints: BoxConstraints(minHeight: constraints.maxHeight - 16),
             child: Column(
               children: [
                 const PlayerHeader(),
 
                 const SizedBox(height: 28),
+
+                if (youtubeController != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: YoutubePlayer(
+                      controller: youtubeController!,
+                      aspectRatio: 16 / 9,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                ],
 
                 SizedBox(
                   width: artworkSize,
@@ -137,10 +147,7 @@ class _NowPlayingContent extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white60,
-                    fontSize: 17,
-                  ),
+                  style: const TextStyle(color: Colors.white60, fontSize: 17),
                 ),
 
                 const SizedBox(height: 28),

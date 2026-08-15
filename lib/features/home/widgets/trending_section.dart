@@ -9,12 +9,10 @@ class TrendingSection extends ConsumerStatefulWidget {
   const TrendingSection({super.key});
 
   @override
-  ConsumerState<TrendingSection> createState() =>
-      _TrendingSectionState();
+  ConsumerState<TrendingSection> createState() => _TrendingSectionState();
 }
 
-class _TrendingSectionState
-    extends ConsumerState<TrendingSection> {
+class _TrendingSectionState extends ConsumerState<TrendingSection> {
   @override
   void initState() {
     super.initState();
@@ -31,9 +29,7 @@ class _TrendingSectionState
     if (library.loading) {
       return const SizedBox(
         height: 220,
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -67,8 +63,7 @@ class _TrendingSectionState
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
         itemCount: library.songs.length,
-        separatorBuilder: (context, index) =>
-            const SizedBox(width: 16),
+        separatorBuilder: (context, index) => const SizedBox(width: 16),
         itemBuilder: (context, index) {
           final song = library.songs[index];
 
@@ -76,6 +71,7 @@ class _TrendingSectionState
             title: song.title,
             artist: song.artist,
             image: song.artwork ?? '',
+            heroTag: 'trending-${song.id}',
             favoriteId: song.id,
             favoriteAlbum: song.album,
             favoriteStreamUrl: song.audioUrl,
@@ -84,10 +80,7 @@ class _TrendingSectionState
             onTap: () {
               ref
                   .read(playerControllerProvider.notifier)
-                  .playSong(
-                    song,
-                    queue: library.songs,
-                  );
+                  .playSong(song, queue: library.songs);
             },
           );
         },

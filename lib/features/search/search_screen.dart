@@ -1,62 +1,115 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/providers/search_provider.dart';
 import '../../data/models/online/online_song.dart';
-import '../library/favorite_provider.dart';
-import '../youtube_test/youtube_test_screen.dart';
+import '../player/player_controller.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
   @override
-  ConsumerState<SearchScreen> createState() =>
-      _SearchScreenState();
+  ConsumerState<SearchScreen> createState() => _SearchScreenState();
 }
 
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   late final TextEditingController _controller;
 
+  bool _playingSong = false;
+
   @override
   void initState() {
     super.initState();
+
     _controller = TextEditingController();
+    _controller.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onTextChanged);
     _controller.dispose();
     super.dispose();
   }
 
-  void _search(String value) {
-    ref
-        .read(searchControllerProvider.notifier)
-        .search(value);
+  void _onTextChanged() {
+    if (!mounted) return;
+    setState(() {});
   }
 
-  Future<void> _play(
-    OnlineSong song,
-    List<OnlineSong> queue,
-  ) async {
-    if (song.id.trim().isEmpty) {
+  void _search(String value) {
+    ref.read(searchControllerProvider.notifier).search(value);
+  }
+
+  void _clearSearch() {
+    _controller.clear();
+
+    ref.read(searchControllerProvider.notifier).clear();
+  }
+
+  Future<void> _playSong(OnlineSong song, List<OnlineSong> queue) async {
+    final videoId = song.id.trim();
+
+    if (videoId.isEmpty) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'This song does not have a YouTube video ID.',
-          ),
+          content: Text('This song does not have a YouTube video ID.'),
         ),
       );
+
       return;
     }
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => YoutubeTestScreen(
-          song: song,
+    if (_playingSong) {
+      return;
+    }
+
+    setState(() {
+      _playingSong = true;
+    });
+
+    try {
+      context.push('/player');
+      await Future<void>.delayed(Duration.zero);
+
+      await ref
+          .read(playerControllerProvider.notifier)
+          .playOnlineSong(song, queue: queue);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Playing ${song.title}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          duration: const Duration(seconds: 2),
         ),
-      ),
-    );
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Unable to play this song: $error',
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _playingSong = false;
+        });
+      }
+    }
   }
 
   @override
@@ -68,305 +121,263 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF09090B),
         foregroundColor: Colors.white,
-        title: const Text('Search'),
+        elevation: 0,
+        title: const Text(
+          'Search',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                20,
-                8,
-                20,
-                16,
+            _buildSearchField(),
+            Expanded(child: _buildContent(state)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      child: TextField(
+        controller: _controller,
+        autofocus: true,
+        onChanged: _search,
+        onSubmitted: _search,
+        textInputAction: TextInputAction.search,
+        style: const TextStyle(color: Colors.white, fontSize: 16),
+        cursorColor: Colors.white,
+        decoration: InputDecoration(
+          hintText: 'Search songs, artists, albums...',
+          hintStyle: const TextStyle(color: Colors.white54),
+          prefixIcon: const Icon(Icons.search_rounded, color: Colors.white54),
+          suffixIcon: _controller.text.isEmpty
+              ? null
+              : IconButton(
+                  onPressed: _clearSearch,
+                  icon: const Icon(Icons.close_rounded, color: Colors.white54),
+                ),
+          filled: true,
+          fillColor: const Color(0xFF18181B),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(18),
+            borderSide: const BorderSide(color: Colors.white24),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(dynamic state) {
+    if (state.loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+
+    if (state.error != null && state.error.toString().trim().isNotEmpty) {
+      return _buildError(state.error.toString());
+    }
+
+    if (state.query.trim().isEmpty) {
+      return _buildInitialState();
+    }
+
+    if (state.songs.isEmpty) {
+      return _buildEmptyState(state.query);
+    }
+
+    return _buildResults(state.songs);
+  }
+
+  Widget _buildInitialState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                color: const Color(0xFF18181B),
+                borderRadius: BorderRadius.circular(24),
               ),
-              child: TextField(
-                controller: _controller,
-                autofocus: true,
-                onChanged: _search,
-                onSubmitted: _search,
-                style: const TextStyle(
-                  color: Colors.white,
-                ),
-                textInputAction: TextInputAction.search,
-                decoration: InputDecoration(
-                  hintText:
-                      'Search songs, artists, albums...',
-                  hintStyle: const TextStyle(
-                    color: Colors.white54,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    color: Colors.white54,
-                  ),
-                  suffixIcon: _controller.text.isEmpty
-                      ? null
-                      : IconButton(
-                          onPressed: () {
-                            _controller.clear();
-
-                            ref
-                                .read(
-                                  searchControllerProvider
-                                      .notifier,
-                                )
-                                .clear();
-
-                            setState(() {});
-                          },
-                          icon: const Icon(
-                            Icons.close_rounded,
-                            color: Colors.white54,
-                          ),
-                        ),
-                  filled: true,
-                  fillColor: const Color(0xFF18181B),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
+              child: const Icon(
+                Icons.search_rounded,
+                color: Colors.white54,
+                size: 36,
               ),
             ),
-            Expanded(
-              child: _SearchBody(
-                loading: state.loading,
-                error: state.error,
-                query: state.query,
-                songs: state.songs,
-                onSongTap: _play,
+            const SizedBox(height: 20),
+            const Text(
+              'Find your music',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
               ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Search for songs, artists and albums.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white54, fontSize: 14),
             ),
           ],
         ),
       ),
     );
   }
-}
 
-class _SearchBody extends StatelessWidget {
-  const _SearchBody({
-    required this.loading,
-    required this.error,
-    required this.query,
-    required this.songs,
-    required this.onSongTap,
-  });
-
-  final bool loading;
-  final String? error;
-  final String query;
-  final List<OnlineSong> songs;
-
-  final Future<void> Function(
-    OnlineSong song,
-    List<OnlineSong> queue,
-  ) onSongTap;
-
-  @override
-  Widget build(BuildContext context) {
-    if (loading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-
-    if (error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            error!,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white70,
+  Widget _buildEmptyState(String query) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.music_off_rounded,
+              color: Colors.white38,
+              size: 52,
             ),
-          ),
+            const SizedBox(height: 18),
+            const Text(
+              'No results found',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Nothing matched "$query".',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 14),
+            ),
+          ],
         ),
-      );
-    }
-
-    if (query.isEmpty) {
-      return const Center(
-        child: Text(
-          'Search for songs, artists, or albums',
-          style: TextStyle(
-            color: Colors.white54,
-          ),
-        ),
-      );
-    }
-
-    if (songs.isEmpty) {
-      return const Center(
-        child: Text(
-          'No results found',
-          style: TextStyle(
-            color: Colors.white54,
-          ),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        0,
-        20,
-        32,
       ),
+    );
+  }
+
+  Widget _buildError(String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline_rounded,
+              color: Colors.white54,
+              size: 52,
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Search failed',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              onPressed: () {
+                _search(_controller.text);
+              },
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Try again'),
+              style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildResults(List<OnlineSong> songs) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       itemCount: songs.length,
-      separatorBuilder: (_, index) =>
-          const SizedBox(height: 8),
+      separatorBuilder: (context, index) {
+        return const SizedBox(height: 4);
+      },
       itemBuilder: (context, index) {
         final song = songs[index];
 
-        return _SearchSongTile(
+        return _SongTile(
           song: song,
-          onTap: () => onSongTap(
-            song,
-            songs,
-          ),
+          loading: _playingSong,
+          onTap: () {
+            _playSong(song, songs);
+          },
         );
       },
     );
   }
 }
 
-class _SearchSongTile extends ConsumerWidget {
-  const _SearchSongTile({
+class _SongTile extends StatelessWidget {
+  const _SongTile({
     required this.song,
     required this.onTap,
+    required this.loading,
   });
 
   final OnlineSong song;
   final VoidCallback onTap;
+  final bool loading;
 
   @override
-  Widget build(
-    BuildContext context,
-    WidgetRef ref,
-  ) {
-    final hasArtwork =
-        song.artwork.trim().isNotEmpty;
-
-    final isFavorite = ref
-        .watch(favoriteProvider)
-        .items
-        .any((item) => item.id == song.id);
-
+  Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF18181B),
-      borderRadius: BorderRadius.circular(16),
+      color: Colors.transparent,
       child: InkWell(
+        onTap: loading ? null : onTap,
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           child: Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: hasArtwork
-                    ? Image.network(
-                        song.artwork,
-                        width: 58,
-                        height: 58,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (context, error, stackTrace) =>
-                                _placeholder(),
-                      )
-                    : _placeholder(),
-              ),
-
+              _Artwork(url: song.artwork),
               const SizedBox(width: 14),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                  mainAxisAlignment:
-                      MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      song.title,
-                      maxLines: 1,
-                      overflow:
-                          TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-
-                    const SizedBox(height: 4),
-
-                    Text(
-                      song.artist,
-                      maxLines: 1,
-                      overflow:
-                          TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white60,
-                      ),
-                    ),
-
-                    if (song.album
-                        .trim()
-                        .isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        song.album,
-                        maxLines: 1,
-                        overflow:
-                            TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white38,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
+              Expanded(child: _SongInformation(song: song)),
+              const SizedBox(width: 8),
               IconButton(
-                tooltip: isFavorite
-                    ? 'Remove from favorites'
-                    : 'Add to favorites',
-                icon: Icon(
-                  isFavorite
-                      ? Icons.favorite
-                      : Icons.favorite_border,
-                  color: isFavorite
-                      ? Colors.redAccent
-                      : Colors.white70,
-                ),
-                onPressed: () async {
-                  final item = FavoriteItem(
-                    id: song.id,
-                    title: song.title,
-                    artist: song.artist,
-                    album: song.album,
-                    artwork: song.artwork,
-                    streamUrl: song.streamUrl,
-                    durationMs:
-                        song.duration.inMilliseconds,
-                    isOnline: true,
-                  );
-
-                  await ref
-                      .read(
-                        favoriteProvider.notifier,
+                onPressed: loading ? null : onTap,
+                tooltip: 'Play',
+                icon: loading
+                    ? const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
-                      .toggle(item);
-                },
-              ),
-
-              const Icon(
-                Icons.play_arrow_rounded,
-                color: Colors.white70,
+                    : const Icon(
+                        Icons.play_circle_fill_rounded,
+                        color: Colors.white,
+                        size: 32,
+                      ),
               ),
             ],
           ),
@@ -374,23 +385,118 @@ class _SearchSongTile extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _placeholder() {
+class _SongInformation extends StatelessWidget {
+  const _SongInformation({required this.song});
+
+  final OnlineSong song;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDuration = song.duration > Duration.zero;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          song.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          song.artist,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.white60, fontSize: 13),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Flexible(
+              child: Text(
+                song.album,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+              ),
+            ),
+            if (hasDuration) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 6),
+                child: Text('•', style: TextStyle(color: Colors.white24)),
+              ),
+              Text(
+                _formatDuration(song.duration),
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _formatDuration(Duration duration) {
+    final minutes = duration.inMinutes;
+
+    final seconds = duration.inSeconds % 60;
+
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+}
+
+class _Artwork extends StatelessWidget {
+  const _Artwork({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.trim().isEmpty) {
+      return _placeholder();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        url,
+        width: 58,
+        height: 58,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (context, error, stackTrace) {
+          return _placeholder();
+        },
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) {
+            return child;
+          }
+
+          return _placeholder(loading: true);
+        },
+      ),
+    );
+  }
+
+  Widget _placeholder({bool loading = false}) {
     return Container(
       width: 58,
       height: 58,
       decoration: BoxDecoration(
+        color: const Color(0xFF18181B),
         borderRadius: BorderRadius.circular(12),
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFFA855F7),
-            Color(0xFF22D3EE),
-          ],
-        ),
       ),
-      child: const Icon(
-        Icons.music_note_rounded,
-        color: Colors.white,
+      child: Icon(
+        loading ? Icons.hourglass_empty_rounded : Icons.music_note_rounded,
+        color: Colors.white38,
+        size: 26,
       ),
     );
   }

@@ -24,16 +24,14 @@ class PlayerProgress extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(playerControllerProvider);
-    final controller =
-        ref.read(playerControllerProvider.notifier);
+    final controller = ref.read(playerControllerProvider.notifier);
 
     final duration = player.duration;
     final position = player.position;
 
-    final maxMilliseconds =
-        duration.inMilliseconds > 0
-            ? duration.inMilliseconds
-            : 1;
+    final maxMilliseconds = duration.inMilliseconds > 0
+        ? duration.inMilliseconds
+        : 1;
 
     final currentMilliseconds = position.inMilliseconds.clamp(
       0,
@@ -42,6 +40,28 @@ class PlayerProgress extends ConsumerWidget {
 
     return Column(
       children: [
+        if (player.isBuffering)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Color(0xFFA855F7),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Buffering audio…',
+                  style: TextStyle(color: Colors.white60, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             trackHeight: 4,
@@ -49,12 +69,8 @@ class PlayerProgress extends ConsumerWidget {
             inactiveTrackColor: Colors.white12,
             thumbColor: Colors.white,
             overlayColor: const Color(0x33A855F7),
-            thumbShape: const RoundSliderThumbShape(
-              enabledThumbRadius: 6,
-            ),
-            overlayShape: const RoundSliderOverlayShape(
-              overlayRadius: 16,
-            ),
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
           ),
           child: Slider(
             value: currentMilliseconds.toDouble(),
@@ -62,35 +78,22 @@ class PlayerProgress extends ConsumerWidget {
             onChanged: duration <= Duration.zero
                 ? null
                 : (value) {
-                    controller.seek(
-                      Duration(
-                        milliseconds: value.round(),
-                      ),
-                    );
+                    controller.seek(Duration(milliseconds: value.round()));
                   },
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 4,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Row(
-            mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 _format(position),
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
               ),
               Text(
                 _format(duration),
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 12,
-                ),
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
               ),
             ],
           ),

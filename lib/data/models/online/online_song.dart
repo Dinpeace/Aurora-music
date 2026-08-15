@@ -17,28 +17,43 @@ class OnlineSong {
     required this.duration,
   });
 
-  factory OnlineSong.fromJson(Map<String, dynamic> json) {
+  factory OnlineSong.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return OnlineSong(
-      id: _text(json['id'] ?? json['videoId'] ?? json['video_id']),
+      id: _text(
+        json['id'] ??
+            json['videoId'] ??
+            json['video_id'],
+      ),
       title: _text(
         json['title'] ?? json['name'],
         fallback: 'Unknown Title',
       ),
       artist: _text(
-        json['artist'] ?? json['artistName'],
+        json['artist'] ??
+            json['artistName'] ??
+            json['author'],
         fallback: 'Unknown Artist',
       ),
       album: _text(
-        json['album'] ?? json['albumName'],
-        fallback: 'Unknown Album',
+        json['album'] ??
+            json['albumName'],
+        fallback: 'YouTube',
       ),
       artwork: _text(
-        json['artwork'] ?? json['thumbnail'] ?? json['thumbnailUrl'],
+        json['artwork'] ??
+            json['thumbnail'] ??
+            json['thumbnailUrl'],
       ),
       streamUrl: _text(
-        json['streamUrl'] ?? json['stream_url'] ?? json['url'],
+        json['streamUrl'] ??
+            json['stream_url'] ??
+            json['url'],
       ),
-      duration: _duration(json['duration']),
+      duration: _duration(
+        json['duration'],
+      ),
     );
   }
 
@@ -58,36 +73,68 @@ class OnlineSong {
     dynamic value, {
     String fallback = '',
   }) {
-    final text = value?.toString().trim() ?? '';
-    return text.isEmpty ? fallback : text;
+    final text =
+        value?.toString().trim() ?? '';
+
+    return text.isEmpty
+        ? fallback
+        : text;
   }
 
-  static Duration _duration(dynamic value) {
-    if (value is Duration) return value;
+  static Duration _duration(
+    dynamic value,
+  ) {
+    if (value is Duration) {
+      return value;
+    }
 
     if (value is num) {
       final number = value.toInt();
+
       return Duration(
-        milliseconds: number < 100000 ? number * 1000 : number,
+        milliseconds:
+            number < 100000
+                ? number * 1000
+                : number,
       );
     }
 
     if (value is String) {
       final text = value.trim();
+
+      if (text.isEmpty) {
+        return Duration.zero;
+      }
+
       final parts = text.split(':');
 
       if (parts.length == 2) {
         return Duration(
-          minutes: int.tryParse(parts[0]) ?? 0,
-          seconds: int.tryParse(parts[1]) ?? 0,
+          minutes:
+              int.tryParse(parts[0]) ?? 0,
+          seconds:
+              int.tryParse(parts[1]) ?? 0,
         );
       }
 
       if (parts.length == 3) {
         return Duration(
-          hours: int.tryParse(parts[0]) ?? 0,
-          minutes: int.tryParse(parts[1]) ?? 0,
-          seconds: int.tryParse(parts[2]) ?? 0,
+          hours:
+              int.tryParse(parts[0]) ?? 0,
+          minutes:
+              int.tryParse(parts[1]) ?? 0,
+          seconds:
+              int.tryParse(parts[2]) ?? 0,
+        );
+      }
+
+      final seconds =
+          double.tryParse(text);
+
+      if (seconds != null) {
+        return Duration(
+          milliseconds:
+              (seconds * 1000).round(),
         );
       }
     }

@@ -1,71 +1,49 @@
 name: aurora_music
-description: A modern open-source music player built with Flutter.
-
+description: Aurora Music - Modern music player.
 publish_to: "none"
 
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
-  sdk: ">=3.8.0 <4.0.0"
+  sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # -----------------------------
-  # UI
-  # -----------------------------
-  cupertino_icons: ^1.0.8
-  google_fonts: ^6.3.1
-  flutter_svg: ^2.2.1
-  cached_network_image: ^3.4.1
-  flutter_animate: ^4.5.2
-  dynamic_color: ^1.7.0
-
-  # -----------------------------
-  # State Management
-  # -----------------------------
+  # State management
   flutter_riverpod: ^2.6.1
 
-  # -----------------------------
   # Navigation
-  # -----------------------------
-  go_router: ^16.3.0
+  go_router: ^17.3.0
 
-  # -----------------------------
-  # Networking
-  # -----------------------------
-  dio: ^5.11.0
+  # Audio
+  just_audio: ^0.10.6
+  audio_service: ^0.18.19
+  audio_session: ^0.2.4
 
-  # -----------------------------
-  # Audio Engine
-  # -----------------------------
-  just_audio: ^0.10.4
-  just_audio_background: ^0.0.1-beta.17
-  audio_service: ^0.18.18
-  audio_session: ^0.2.2
-  audio_video_progress_bar: ^2.0.3
-
-  # -----------------------------
   # Permissions
-  # -----------------------------
   permission_handler: ^12.0.3
 
-  # -----------------------------
-  # Local Storage
-  # -----------------------------
-  shared_preferences: ^2.5.3
-
-  # -----------------------------
-  # Utilities
-  # -----------------------------
-  intl: ^0.20.2
-  collection: ^1.19.1
-  pretty_dio_logger: ^1.4.0
-  firebase_core: ^4.13.0
-  google_sign_in: ^7.2.0
-  firebase_auth: ^6.5.7
+  # YouTube / Online Music
+  youtube_explode_dart: ^3.1.0
   youtube_player_iframe: ^6.0.2
+
+  # Networking
+  dio: ^5.11.0
+  pretty_dio_logger: ^1.4.0
+
+  # Storage
+  shared_preferences: ^2.5.5
+
+  # Firebase / Authentication
+  firebase_core: ^4.12.1
+  firebase_auth: ^6.5.6
+  google_sign_in: ^7.2.0
+
+  # UI
+  google_fonts: ^8.2.0
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
@@ -75,20 +53,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  assets:
-    - assets/logos/
-    - assets/images/
-    - assets/icons/
-    - assets/animations/
-
-  fonts:
-    - family: PlusJakartaSans
-      fonts:
-        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
-        - asset: assets/fonts/PlusJakartaSans-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/PlusJakartaSans-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/PlusJakartaSans-Bold.ttf
-          weight: 700

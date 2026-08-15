@@ -7,20 +7,22 @@ import '../../data/models/online/online_song.dart';
 class YoutubeTestScreen extends StatefulWidget {
   const YoutubeTestScreen({
     super.key,
-    this.song,
+    required this.song,
   });
 
-  final OnlineSong? song;
+  final OnlineSong song;
 
   @override
-  State<YoutubeTestScreen> createState() => _YoutubeTestScreenState();
+  State<YoutubeTestScreen> createState() =>
+      _YoutubeTestScreenState();
 }
 
-class _YoutubeTestScreenState extends State<YoutubeTestScreen> {
+class _YoutubeTestScreenState
+    extends State<YoutubeTestScreen> {
   late final YoutubePlayerService _youtube;
-  late final TextEditingController _videoIdController;
 
-  String _status = 'Ready';
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -30,118 +32,131 @@ class _YoutubeTestScreenState extends State<YoutubeTestScreen> {
       autoPlay: true,
     );
 
-    _videoIdController = TextEditingController(
-      text: widget.song?.id ?? '',
-    );
-
-    if (widget.song != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadVideo();
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadSong();
+    });
   }
 
-  Future<void> _loadVideo() async {
-    final videoId = _videoIdController.text.trim();
+  Future<void> _loadSong() async {
+    final videoId = widget.song.id.trim();
 
     if (videoId.isEmpty) {
+      if (!mounted) return;
+
       setState(() {
-        _status = 'No YouTube video ID.';
+        _loading = false;
+        _error = 'This song has no YouTube video ID.';
       });
+
       return;
     }
 
+    if (!mounted) return;
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
     try {
-      setState(() {
-        _status = 'Loading...';
-      });
+      debugPrint(
+        'Aurora Test Player: loading $videoId',
+      );
 
       await _youtube.load(videoId);
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
-        _status = 'Playing';
+        _loading = false;
       });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
 
-      setState(() {
-        _status = 'Playback error: $error';
-      });
-    }
-  }
-
-  Future<void> _play() async {
-    try {
-      await _youtube.play();
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _status = 'Playing';
-      });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _status = 'Playback error: $error';
-      });
-    }
-  }
-
-  Future<void> _pause() async {
-    try {
-      await _youtube.pause();
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _status = 'Paused';
-      });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _status = 'Playback error: $error';
-      });
-    }
-  }
-
-  Future<void> _seek() async {
-    try {
-      await _youtube.seek(
-        const Duration(seconds: 30),
+      debugPrint(
+        'Aurora Test Player: loaded $videoId',
+      );
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Aurora Test Player error: $error',
       );
 
-      if (!mounted) {
-        return;
-      }
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+
+      if (!mounted) return;
 
       setState(() {
-        _status = 'Seeked to 30 seconds';
-      });
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _status = 'Seek error: $error';
+        _loading = false;
+        _error = error.toString();
       });
     }
+  }
+
+  Future<void> _togglePlayPause() async {
+    try {
+      await _youtube.togglePlayPause();
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Aurora Test Player toggle error: $error',
+      );
+
+      debugPrintStack(
+        stackTrace: stackTrace,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _error = error.toString();
+      });
+    }
+  }
+
+  Future<void> _seekBackward() async {
+    try {
+      final position =
+          await _youtube.getCurrentPosition();
+
+      final target =
+          position - const Duration(seconds: 10);
+
+      await _youtube.seek(
+        target.isNegative
+            ? Duration.zero
+            : target,
+      );
+    } catch (error) {
+      _showError(error);
+    }
+  }
+
+  Future<void> _seekForward() async {
+    try {
+      final position =
+          await _youtube.getCurrentPosition();
+
+      final duration =
+          await _youtube.getDuration();
+
+      final target =
+          position + const Duration(seconds: 10);
+
+      await _youtube.seek(
+        target > duration
+            ? duration
+            : target,
+      );
+    } catch (error) {
+      _showError(error);
+    }
+  }
+
+  void _showError(Object error) {
+    if (!mounted) return;
+
+    setState(() {
+      _error = error.toString();
+    });
   }
 
   @override
@@ -151,162 +166,291 @@ class _YoutubeTestScreenState extends State<YoutubeTestScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
       appBar: AppBar(
-        title: Text(
-          song?.title ?? 'YouTube Player Test',
-        ),
         backgroundColor: const Color(0xFF09090B),
         foregroundColor: Colors.white,
+        elevation: 0,
+        title: const Text(
+          'Now Playing',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
       body: SafeArea(
         child: Column(
           children: [
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: YoutubePlayer(
-                controller: _youtube.controller,
+            const SizedBox(height: 16),
+
+            // ---------------------------------------------------------------
+            // YOUTUBE PLAYER
+            // ---------------------------------------------------------------
+
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+              ),
+              child: ClipRRect(
+                borderRadius:
+                    BorderRadius.circular(18),
+                child: YoutubePlayer(
+                  controller: _youtube.controller,
+                  aspectRatio: 16 / 9,
+                  autoFullScreen: true,
+                  keepAlive: true,
+                ),
               ),
             ),
 
+            const SizedBox(height: 24),
+
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.fromLTRB(
+                  20,
+                  0,
+                  20,
+                  32,
+                ),
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.stretch,
                   children: [
-                    if (song != null) ...[
-                      Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(12),
-                            child: song.artwork.isNotEmpty
-                                ? Image.network(
-                                    song.artwork,
-                                    width: 64,
-                                    height: 64,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (
-                                      context,
-                                      error,
-                                      stackTrace,
-                                    ) {
-                                      return _artworkPlaceholder();
-                                    },
-                                  )
-                                : _artworkPlaceholder(),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  song.title,
-                                  maxLines: 2,
-                                  overflow:
-                                      TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  song.artist,
-                                  maxLines: 1,
-                                  overflow:
-                                      TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    color: Colors.white60,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                    ],
+                    // -------------------------------------------------------
+                    // ARTWORK
+                    // -------------------------------------------------------
 
-                    const Text(
-                      'YouTube Video ID',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    _buildArtwork(song),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 22),
 
-                    TextField(
-                      controller: _videoIdController,
-                      style: const TextStyle(
-                        color: Colors.white,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'YouTube video ID',
-                        hintStyle: const TextStyle(
-                          color: Colors.white38,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white10,
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(12),
-                        ),
-                      ),
-                      onSubmitted: (_) => _loadVideo(),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    FilledButton(
-                      onPressed: _loadVideo,
-                      child: const Text('LOAD & PLAY'),
-                    ),
-
-                    const SizedBox(height: 16),
+                    // -------------------------------------------------------
+                    // TITLE
+                    // -------------------------------------------------------
 
                     Text(
-                      _status,
+                      song.title,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow:
+                          TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: Colors.white,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+
+                    const SizedBox(height: 7),
+
+                    // -------------------------------------------------------
+                    // ARTIST
+                    // -------------------------------------------------------
+
+                    Text(
+                      song.artist,
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow:
+                          TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white60,
                         fontSize: 15,
                       ),
                     ),
 
+                    if (song.album
+                        .trim()
+                        .isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        song.album,
+                        textAlign:
+                            TextAlign.center,
+                        maxLines: 1,
+                        overflow:
+                            TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white38,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+
                     const SizedBox(height: 24),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _play,
-                            child: const Text('PLAY'),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _pause,
-                            child: const Text('PAUSE'),
-                          ),
-                        ),
-                      ],
+                    // -------------------------------------------------------
+                    // PLAYER STATE
+                    // -------------------------------------------------------
+
+                    YoutubeValueBuilder(
+                      controller: _youtube.controller,
+                      builder: (
+                        context,
+                        value,
+                      ) {
+                        final isPlaying =
+                            value.playerState ==
+                                PlayerState.playing;
+
+                        final isBuffering =
+                            value.playerState ==
+                                PlayerState.buffering;
+
+                        final hasError =
+                            value.hasError;
+
+                        if (hasError) {
+                          return _buildPlayerError(
+                            value.error.toString(),
+                          );
+                        }
+
+                        return Column(
+                          children: [
+                            if (_loading ||
+                                isBuffering)
+                              const Padding(
+                                padding:
+                                    EdgeInsets.only(
+                                  bottom: 16,
+                                ),
+                                child:
+                                    CircularProgressIndicator(
+                                  color:
+                                      Colors.white,
+                                ),
+                              ),
+
+                            if (_error != null)
+                              _buildPlayerError(
+                                _error!,
+                              ),
+
+                            const SizedBox(
+                              height: 8,
+                            ),
+
+                            // -------------------------------------------------
+                            // CUSTOM CONTROLS
+                            // -------------------------------------------------
+
+                            Row(
+                              mainAxisAlignment:
+                                  MainAxisAlignment
+                                      .center,
+                              children: [
+                                IconButton(
+                                  onPressed:
+                                      _loading
+                                          ? null
+                                          : _seekBackward,
+                                  iconSize: 34,
+                                  color: Colors.white,
+                                  icon: const Icon(
+                                    Icons
+                                        .replay_10_rounded,
+                                  ),
+                                ),
+
+                                const SizedBox(
+                                  width: 22,
+                                ),
+
+                                Container(
+                                  width: 68,
+                                  height: 68,
+                                  decoration:
+                                      const BoxDecoration(
+                                    shape:
+                                        BoxShape.circle,
+                                    gradient:
+                                        LinearGradient(
+                                      colors: [
+                                        Color(
+                                          0xFFA855F7,
+                                        ),
+                                        Color(
+                                          0xFF22D3EE,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  child:
+                                      IconButton(
+                                    onPressed:
+                                        _loading
+                                            ? null
+                                            : _togglePlayPause,
+                                    iconSize: 36,
+                                    color:
+                                        Colors.white,
+                                    icon: Icon(
+                                      isPlaying
+                                          ? Icons
+                                              .pause_rounded
+                                          : Icons
+                                              .play_arrow_rounded,
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(
+                                  width: 22,
+                                ),
+
+                                IconButton(
+                                  onPressed:
+                                      _loading
+                                          ? null
+                                          : _seekForward,
+                                  iconSize: 34,
+                                  color: Colors.white,
+                                  icon: const Icon(
+                                    Icons
+                                        .forward_10_rounded,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 24),
 
-                    OutlinedButton(
-                      onPressed: _seek,
-                      child: const Text(
-                        'SEEK TO 30 SECONDS',
+                    // -------------------------------------------------------
+                    // RELOAD
+                    // -------------------------------------------------------
+
+                    OutlinedButton.icon(
+                      onPressed:
+                          _loading
+                              ? null
+                              : _loadSong,
+                      icon: const Icon(
+                        Icons.refresh_rounded,
+                      ),
+                      label: const Text(
+                        'Reload video',
+                      ),
+                      style:
+                          OutlinedButton.styleFrom(
+                        foregroundColor:
+                            Colors.white,
+                        side: const BorderSide(
+                          color: Colors.white24,
+                        ),
+                        padding:
+                            const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        shape:
+                            RoundedRectangleBorder(
+                          borderRadius:
+                              BorderRadius.circular(
+                            14,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -319,28 +463,100 @@ class _YoutubeTestScreenState extends State<YoutubeTestScreen> {
     );
   }
 
+  Widget _buildArtwork(OnlineSong song) {
+    final artwork = song.artwork.trim();
+
+    if (artwork.isEmpty) {
+      return _artworkPlaceholder();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Image.network(
+        artwork,
+        width: 220,
+        height: 220,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
+        errorBuilder: (
+          context,
+          error,
+          stackTrace,
+        ) {
+          return _artworkPlaceholder();
+        },
+        loadingBuilder: (
+          context,
+          child,
+          loadingProgress,
+        ) {
+          if (loadingProgress == null) {
+            return child;
+          }
+
+          return _artworkPlaceholder();
+        },
+      ),
+    );
+  }
+
   Widget _artworkPlaceholder() {
     return Container(
-      width: 64,
-      height: 64,
+      width: 220,
+      height: 220,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
             Color(0xFFA855F7),
             Color(0xFF22D3EE),
           ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
       child: const Icon(
         Icons.music_note_rounded,
         color: Colors.white,
+        size: 76,
+      ),
+    );
+  }
+
+  Widget _buildPlayerError(String error) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3B1010),
+        borderRadius:
+            BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.redAccent
+              .withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.error_outline_rounded,
+            color: Colors.redAccent,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            error,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.redAccent,
+              fontSize: 13,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   @override
   void dispose() {
-    _videoIdController.dispose();
     _youtube.dispose();
     super.dispose();
   }

@@ -1,16 +1,13 @@
 import '../../data/models/song.dart';
 
-enum PlayerRepeatMode {
-  off,
-  all,
-  one,
-}
+enum PlayerRepeatMode { off, all, one }
 
 class PlayerState {
   final Song? currentSong;
   final List<Song> queue;
 
   final bool isPlaying;
+  final bool isBuffering;
   final bool isShuffleEnabled;
   final PlayerRepeatMode repeatMode;
 
@@ -23,6 +20,7 @@ class PlayerState {
     this.currentSong,
     this.queue = const [],
     this.isPlaying = false,
+    this.isBuffering = false,
     this.isShuffleEnabled = false,
     this.repeatMode = PlayerRepeatMode.off,
     this.position = Duration.zero,
@@ -36,8 +34,7 @@ class PlayerState {
       return 0;
     }
 
-    return position.inMilliseconds /
-        duration.inMilliseconds;
+    return position.inMilliseconds / duration.inMilliseconds;
   }
 
   String get positionText => _format(position);
@@ -55,6 +52,7 @@ class PlayerState {
     Song? currentSong,
     List<Song>? queue,
     bool? isPlaying,
+    bool? isBuffering,
     bool? isShuffleEnabled,
     PlayerRepeatMode? repeatMode,
     Duration? position,
@@ -66,15 +64,13 @@ class PlayerState {
       currentSong: currentSong ?? this.currentSong,
       queue: queue ?? this.queue,
       isPlaying: isPlaying ?? this.isPlaying,
-      isShuffleEnabled:
-          isShuffleEnabled ?? this.isShuffleEnabled,
+      isBuffering: isBuffering ?? this.isBuffering,
+      isShuffleEnabled: isShuffleEnabled ?? this.isShuffleEnabled,
       repeatMode: repeatMode ?? this.repeatMode,
       position: position ?? this.position,
       duration: duration ?? this.duration,
-      sleepTimerRemaining:
-          sleepTimerRemaining ?? this.sleepTimerRemaining,
-      crossfadeDuration:
-          crossfadeDuration ?? this.crossfadeDuration,
+      sleepTimerRemaining: sleepTimerRemaining ?? this.sleepTimerRemaining,
+      crossfadeDuration: crossfadeDuration ?? this.crossfadeDuration,
     );
   }
 }

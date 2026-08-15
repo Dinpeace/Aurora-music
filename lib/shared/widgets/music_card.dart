@@ -7,6 +7,7 @@ class MusicCard extends ConsumerWidget {
   final String title;
   final String artist;
   final String image;
+  final Object heroTag;
   final VoidCallback? onTap;
   final bool isFavorite;
 
@@ -24,6 +25,7 @@ class MusicCard extends ConsumerWidget {
     required this.title,
     required this.artist,
     required this.image,
+    required this.heroTag,
     this.onTap,
     this.isFavorite = false,
     this.favoriteId,
@@ -36,8 +38,9 @@ class MusicCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final canFavorite = favoriteId != null && favoriteId!.trim().isNotEmpty;
-    final storedFavorite =
-        canFavorite ? ref.watch(favoriteProvider).items.any((e) => e.id == favoriteId) : false;
+    final storedFavorite = canFavorite
+        ? ref.watch(favoriteProvider).items.any((e) => e.id == favoriteId)
+        : false;
     final favorite = canFavorite ? storedFavorite : isFavorite;
     final hasArtwork = image.trim().isNotEmpty;
 
@@ -52,7 +55,7 @@ class MusicCard extends ConsumerWidget {
             Stack(
               children: [
                 Hero(
-                  tag: title,
+                  tag: heroTag,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
                     child: hasArtwork
@@ -83,8 +86,7 @@ class MusicCard extends ConsumerWidget {
                                 album: favoriteAlbum,
                                 artwork: image,
                                 streamUrl: favoriteStreamUrl,
-                                durationMs:
-                                    favoriteDuration.inMilliseconds,
+                                durationMs: favoriteDuration.inMilliseconds,
                                 isOnline: favoriteIsOnline,
                               );
                               await ref
@@ -99,9 +101,7 @@ class MusicCard extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(50),
                         ),
                         child: Icon(
-                          favorite
-                              ? Icons.favorite
-                              : Icons.favorite_border,
+                          favorite ? Icons.favorite : Icons.favorite_border,
                           color: favorite ? Colors.redAccent : Colors.white,
                           size: 18,
                         ),
@@ -143,10 +143,7 @@ class MusicCard extends ConsumerWidget {
               artist,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 13,
-              ),
+              style: const TextStyle(color: Colors.white60, fontSize: 13),
             ),
           ],
         ),
@@ -165,11 +162,7 @@ class MusicCard extends ConsumerWidget {
         ),
       ),
       child: const Center(
-        child: Icon(
-          Icons.music_note_rounded,
-          color: Colors.white,
-          size: 64,
-        ),
+        child: Icon(Icons.music_note_rounded, color: Colors.white, size: 64),
       ),
     );
   }

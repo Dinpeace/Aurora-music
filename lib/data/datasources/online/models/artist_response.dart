@@ -9,15 +9,27 @@ class ArtistResponse {
     required this.artwork,
   });
 
-  factory ArtistResponse.fromJson(Map<String, dynamic> json) {
+  factory ArtistResponse.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return ArtistResponse(
-      id: json['id']?.toString() ?? '',
-      name: _text(json['name'] ?? json['artist'], 'Unknown Artist'),
-      artwork: _text(json['artwork'] ?? json['thumbnail']),
+      id: _text(json['id']),
+      name: _text(
+        json['name'] ?? json['artist'],
+        fallback: 'Unknown Artist',
+      ),
+      artwork: _text(
+        json['artwork'] ??
+            json['thumbnail'] ??
+            json['thumbnailUrl'],
+      ),
     );
   }
 
-  static String _text(dynamic value, [String fallback = '']) {
+  static String _text(
+    dynamic value, {
+    String fallback = '',
+  }) {
     final text = value?.toString().trim() ?? '';
     return text.isEmpty ? fallback : text;
   }

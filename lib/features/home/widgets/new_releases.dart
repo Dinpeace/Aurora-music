@@ -15,9 +15,7 @@ class NewReleases extends ConsumerWidget {
     if (library.loading) {
       return const SizedBox(
         height: 220,
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -39,8 +37,7 @@ class NewReleases extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
         itemCount: library.songs.length,
-        separatorBuilder: (context, index) =>
-            const SizedBox(width: 16),
+        separatorBuilder: (context, index) => const SizedBox(width: 16),
         itemBuilder: (context, index) {
           final song = library.songs[index];
 
@@ -48,6 +45,7 @@ class NewReleases extends ConsumerWidget {
             title: song.title,
             artist: song.artist,
             image: song.artwork ?? '',
+            heroTag: 'new-releases-${song.id}',
             favoriteId: song.id,
             favoriteAlbum: song.album,
             favoriteStreamUrl: song.audioUrl,
@@ -56,10 +54,7 @@ class NewReleases extends ConsumerWidget {
             onTap: () {
               ref
                   .read(playerControllerProvider.notifier)
-                  .playSong(
-                    song,
-                    queue: library.songs,
-                  );
+                  .playSong(song, queue: library.songs);
             },
           );
         },

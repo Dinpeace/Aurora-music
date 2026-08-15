@@ -1,4 +1,7 @@
-from fastapi import FastAPI, Query
+import os
+
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from ytmusicapi import YTMusic
 
 app = FastAPI(
@@ -7,6 +10,20 @@ app = FastAPI(
 )
 
 ytmusic = YTMusic()
+
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    if origin.strip()
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins or ["*"],
+    allow_credentials=False,
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")
@@ -18,12 +35,24 @@ def root():
     }
 
 
+@app.get("/health")
+def health():
+    """Lightweight probe used by Cloud Run and uptime monitoring."""
+    return {"status": "ok"}
+
+
 @app.get("/search")
 def search(q: str = Query(..., min_length=1)):
-    results = ytmusic.search(
-        q.strip(),
-        filter="songs",
-    )
+    try:
+        results = ytmusic.search(
+            q.strip(),
+            filter="songs",
+        )
+    except Exception as error:
+        raise HTTPException(
+            status_code=503,
+            detail="Music search is temporarily unavailable.",
+        ) from error
 
     songs = []
 
