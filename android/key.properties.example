@@ -1,0 +1,7 @@
+# Copy this file to android/key.properties for local release builds.
+# Never commit android/key.properties or your keystore.
+
+storePassword=YOUR_STORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=YOUR_KEY_ALIAS
+storeFile=/absolute/path/to/your/aurora-release-key.jks
