@@ -39,7 +39,7 @@ android {
             if (keystorePropertiesFile.exists()) {
                 keyAlias = keystoreProperties["keyAlias"] as String?
                 keyPassword = keystoreProperties["keyPassword"] as String?
-                storeFile = keystoreProperties["storeFile"]?.toString()?.let(::file)
+                storeFile = keystoreProperties["storeFile"]?.toString()?.let { rootProject.file(it) }
                 storePassword = keystoreProperties["storePassword"] as String?
             }
         }
