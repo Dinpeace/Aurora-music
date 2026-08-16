@@ -25,12 +25,12 @@ class OnlineSong {
         fallback: 'Unknown Title',
       ),
       artist: _text(
-        json['artist'] ?? json['artistName'],
+        json['artist'] ?? json['artistName'] ?? json['author'],
         fallback: 'Unknown Artist',
       ),
       album: _text(
         json['album'] ?? json['albumName'],
-        fallback: 'Unknown Album',
+        fallback: 'YouTube',
       ),
       artwork: _text(
         json['artwork'] ?? json['thumbnail'] ?? json['thumbnailUrl'],
