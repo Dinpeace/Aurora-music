@@ -1,24 +1,24 @@
-Aurora Listening Insights v1
+Aurora Real-time Intelligence v1
 
-Adds a pure, UI-ready summary layer over the existing ListeningHistory and
-TasteProfile systems.
+Adds a lightweight application-wide listening-intelligence change stream.
 
-Metrics:
-- total tracked tracks
-- total plays
-- total skips
-- skip rate
-- completion rate
-- accumulated listened duration
-- top artists
-- top albums
-- top genres
-- favorite artist/track counts
+Behavior:
+- PlayerIntelligenceTracker emits an event after start/progress/complete/skip
+  changes are persisted.
+- Intelligence Dashboard listens and reloads its current history/profile.
+- Made For You listens and recalculates its adaptive recommendations.
+- The event contains no player/song state, so consumers cannot accidentally
+  use stale recommendation payloads.
 
-No player changes are required. This is intentionally isolated so the next
-UI milestone can consume it without changing playback behavior.
+Apply the supplied patches to the existing files in the repository.
 
-Run:
-flutter pub get
+Verification:
 flutter analyze
 flutter test
+
+Expected architecture:
+Player event
+ -> ListeningHistoryService persistence
+ -> ListeningIntelligenceEvents
+ -> Dashboard/profile refresh
+ -> Made For You adaptive refresh

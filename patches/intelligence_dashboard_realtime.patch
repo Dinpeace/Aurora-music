@@ -1,0 +1,29 @@
+diff --git a/lib/features/intelligence/intelligence_dashboard_screen.dart b/lib/features/intelligence/intelligence_dashboard_screen.dart
+--- a/lib/features/intelligence/intelligence_dashboard_screen.dart
++++ b/lib/features/intelligence/intelligence_dashboard_screen.dart
+@@
+ import 'package:flutter/material.dart';
++import 'dart:async';
+
+ import '../../data/models/listening_history_entry.dart';
++import '../../data/services/listening_intelligence_events.dart';
+@@
+   ListeningInsights? _data;
+   bool _loading = true;
++  StreamSubscription<void>? _intelligenceSubscription;
+@@
+   void initState() {
+     super.initState();
+     _load();
++    _intelligenceSubscription =
++        ListeningIntelligenceEvents.instance.changes.listen((_) {
++      _load();
++    });
+   }
++
++  @override
++  void dispose() {
++    _intelligenceSubscription?.cancel();
++    super.dispose();
++  }
+*** End Patch

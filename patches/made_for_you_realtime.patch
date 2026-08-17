@@ -1,0 +1,29 @@
+diff --git a/lib/features/home/widgets/made_for_you.dart b/lib/features/home/widgets/made_for_you.dart
+--- a/lib/features/home/widgets/made_for_you.dart
++++ b/lib/features/home/widgets/made_for_you.dart
+@@
+ import 'package:flutter/material.dart';
++import 'dart:async';
+@@
+ import '../../../data/services/listening_history_service.dart';
++import '../../../data/services/listening_intelligence_events.dart';
+@@
+   bool _loading = true;
+   String _signature = '';
++  StreamSubscription<void>? _intelligenceSubscription;
+@@
+   void initState() {
+     super.initState();
+     Future.microtask(_refresh);
++    _intelligenceSubscription =
++        ListeningIntelligenceEvents.instance.changes.listen((_) {
++      _refresh();
++    });
+   }
++
++  @override
++  void dispose() {
++    _intelligenceSubscription?.cancel();
++    super.dispose();
++  }
+*** End Patch

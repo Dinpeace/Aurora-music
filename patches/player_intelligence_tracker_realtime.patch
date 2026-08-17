@@ -1,0 +1,38 @@
+diff --git a/lib/data/services/player_intelligence_tracker.dart b/lib/data/services/player_intelligence_tracker.dart
+--- a/lib/data/services/player_intelligence_tracker.dart
++++ b/lib/data/services/player_intelligence_tracker.dart
+@@
+ import '../models/song.dart';
+ import 'playback_intelligence_bridge.dart';
++import 'listening_intelligence_events.dart';
+@@
+   PlayerIntelligenceTracker({
+     required PlaybackIntelligenceBridge bridge,
++    ListeningIntelligenceEvents? events,
+-  }) : _bridge = bridge;
++  })  : _bridge = bridge,
++        _events = events ?? ListeningIntelligenceEvents.instance;
+
+   final PlaybackIntelligenceBridge _bridge;
++  final ListeningIntelligenceEvents _events;
+@@
+     _activeSongId = song.id;
+     _meaningfulListenRecorded = false;
+     await _bridge.recordStarted(song);
++    _events.notifyChanged();
+@@
+       await _bridge.recordProgress(
+         song: song,
+         position: position,
+       );
++      _events.notifyChanged();
+@@
+     await _bridge.recordCompleted(song);
++    _events.notifyChanged();
+@@
+       await _bridge.recordSkipped(
+         song: song,
+         position: position,
+       );
++      _events.notifyChanged();
+*** End Patch
