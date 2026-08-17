@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../intelligence/intelligence_dashboard_screen.dart';
+
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
 
@@ -15,12 +17,10 @@ class HomeHeader extends StatelessWidget {
             color: Colors.white,
           ),
         ),
-
         const SizedBox(width: 16),
-
         const Expanded(
           child: Text(
-            "Aurora Music",
+            'Aurora Music',
             style: TextStyle(
               color: Colors.white,
               fontSize: 26,
@@ -28,8 +28,23 @@ class HomeHeader extends StatelessWidget {
             ),
           ),
         ),
-
         IconButton(
+          tooltip: 'Aurora Intelligence',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const IntelligenceDashboardScreen(),
+              ),
+            );
+          },
+          icon: const Icon(
+            Icons.auto_awesome,
+            color: Color(0xFFC084FC),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Notifications',
           onPressed: () {},
           icon: const Icon(
             Icons.notifications_none,
