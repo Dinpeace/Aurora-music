@@ -1,26 +1,24 @@
-Aurora Player → Intelligence Feedback v1
+Aurora Listening Insights v1
 
-Adds PlayerIntelligenceTracker and a ready-to-apply PlayerController patch.
+Adds a pure, UI-ready summary layer over the existing ListeningHistory and
+TasteProfile systems.
 
-Flow:
-Player start
-  -> ListeningHistoryService
-Player progress >= 10s
-  -> meaningful-listen signal
-Manual next within 30s
-  -> skip signal
-Playback completion
-  -> completion signal
-  -> Listening History
-  -> Taste Profile / Adaptive Recommendations
-  -> Smart Queue / Radio / Made For You
+Metrics:
+- total tracked tracks
+- total plays
+- total skips
+- skip rate
+- completion rate
+- accumulated listened duration
+- top artists
+- top albums
+- top genres
+- favorite artist/track counts
 
-Files:
-lib/data/services/player_intelligence_tracker.dart
-test/data/services/player_intelligence_tracker_test.dart
-patches/player_controller_intelligence.patch
+No player changes are required. This is intentionally isolated so the next
+UI milestone can consume it without changing playback behavior.
 
-Important:
-Apply the patch after adding the tracker. The patch is intentionally small and
-targets the existing PlayerController event points; do not replace the entire
-controller file.
+Run:
+flutter pub get
+flutter analyze
+flutter test
