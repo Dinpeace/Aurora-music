@@ -1,0 +1,14 @@
+diff --git a/lib/features/home/home_screen.dart b/lib/features/home/home_screen.dart
+--- a/lib/features/home/home_screen.dart
++++ b/lib/features/home/home_screen.dart
+@@
+ import 'widgets/made_for_you.dart';
++import 'widgets/listening_insights_section.dart';
+@@
+               MadeForYouSection(),
+               SizedBox(height: 32),
++              ListeningInsightsSection(
++                songs: const [],
++              ),
++              SizedBox(height: 32),
+               AuroraRadioSection(),
