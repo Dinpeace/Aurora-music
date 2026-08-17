@@ -3,57 +3,117 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../data/models/online/online_song.dart';
 import '../../../data/models/song.dart';
-import '../../../data/services/mood_energy_service.dart';
-import '../../../data/services/recommendation_engine.dart';
-import '../../../data/services/session_intelligence_service.dart';
+import '../../../data/services/adaptive_recommendation_service.dart';
+import '../../../data/services/listening_history_service.dart';
 import '../../../data/services/taste_profile_service.dart';
 import '../../../shared/widgets/music_card.dart';
 import '../../library/library_controller.dart';
 import '../../player/player_controller.dart';
 
-class MadeForYouSection extends ConsumerWidget {
+class MadeForYouSection extends ConsumerStatefulWidget {
   const MadeForYouSection({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final library = ref.watch(libraryControllerProvider);
+  ConsumerState<MadeForYouSection> createState() => _MadeForYouSectionState();
+}
 
-    if (library.loading || !library.permissionGranted || library.songs.isEmpty) {
-      return const SizedBox.shrink();
+class _MadeForYouSectionState extends ConsumerState<MadeForYouSection> {
+  final ListeningHistoryService _history = ListeningHistoryService();
+  final AdaptiveRecommendationService _adaptive =
+      AdaptiveRecommendationService();
+
+  List<OnlineSong> _recommendations = const [];
+  bool _loading = true;
+  String _signature = '';
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(_refresh);
+  }
+
+  Future<void> _refresh() async {
+    final library = ref.read(libraryControllerProvider);
+    if (library.loading ||
+        !library.permissionGranted ||
+        library.songs.isEmpty) {
+      if (mounted) setState(() => _loading = false);
+      return;
     }
 
+    await _history.initialize();
+    if (!mounted) return;
+
     final songs = library.songs;
-    final favoriteSongs = songs.where((song) => song.favorite).toList();
+    final favorites = songs.where((song) => song.favorite).toList();
+    final history = _history.entries;
 
-    final profile = TasteProfileService().build(
-      history: const [],
-      favoriteArtists: favoriteSongs.map((song) => song.artist).toList(),
-      favoriteIds: favoriteSongs.map((song) => song.id).toList(),
+    final signature = [
+      songs.length,
+      favorites.length,
+      history.length,
+      ...history.take(5).map(
+            (entry) =>
+                '${entry.song.id}:${entry.playCount}:${entry.skipCount}:${entry.lastPlayed.millisecondsSinceEpoch}',
+          ),
+    ].join('|');
+
+    if (signature == _signature && !_loading) return;
+    _signature = signature;
+
+    final taste = TasteProfileService();
+
+    final profile = taste.build(
+      history: history,
+      favoriteArtists: favorites.map((song) => song.artist).toList(),
+      favoriteIds: favorites.map((song) => song.id).toList(),
     );
 
-    final session = SessionIntelligenceService();
-    final mood = MoodEnergyService(session: session);
-    final engine = RecommendationEngine(
-      taste: TasteProfileService(),
-      mood: mood,
-      session: session,
-    );
-
-    final candidates = songs.map(_toOnlineSong).toList(growable: false);
-    final recommendations = engine.rank(
-      candidates: candidates,
+    final recommendations = _adaptive.rank(
+      candidates: songs.map(_toOnlineSong).toList(growable: false),
       profile: profile,
-      mood: mood.inferCurrentProfile(),
+      history: history,
       limit: 10,
     );
 
-    if (recommendations.isEmpty) {
+    if (!mounted) return;
+    setState(() {
+      _recommendations = recommendations;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final library = ref.watch(libraryControllerProvider);
+
+    if (library.loading ||
+        !library.permissionGranted ||
+        library.songs.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (_loading) {
+      return const SizedBox(
+        height: 250,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_recommendations.isEmpty) {
       return const SizedBox.shrink();
     }
 
     final byId = <String, Song>{
-      for (final song in songs) song.id: song,
+      for (final song in library.songs) song.id: song,
     };
+
+    final songs = _recommendations
+        .map((song) => byId[song.id])
+        .whereType<Song>()
+        .toList(growable: false);
+
+    if (songs.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,12 +135,10 @@ class MadeForYouSection extends ConsumerWidget {
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             scrollDirection: Axis.horizontal,
-            itemCount: recommendations.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 16),
+            itemCount: songs.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
-              final onlineSong = recommendations[index];
-              final song = byId[onlineSong.id];
-              if (song == null) return const SizedBox.shrink();
+              final song = songs[index];
 
               return MusicCard(
                 title: song.title,
@@ -94,10 +152,7 @@ class MadeForYouSection extends ConsumerWidget {
                 onTap: () {
                   ref
                       .read(playerControllerProvider.notifier)
-                      .playSong(
-                        song,
-                        queue: songs,
-                      );
+                      .playSong(song, queue: songs);
                 },
               );
             },
