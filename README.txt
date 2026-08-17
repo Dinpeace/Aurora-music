@@ -1,24 +1,19 @@
-Aurora Real-time Intelligence v1
+Aurora Recommendation Feedback Loop v2
 
-Adds a lightweight application-wide listening-intelligence change stream.
+Adds a dedicated, stateless feedback translator for existing listening history.
+
+Signals:
+- plays
+- completion position
+- replays
+- skips
 
 Behavior:
-- PlayerIntelligenceTracker emits an event after start/progress/complete/skip
-  changes are persisted.
-- Intelligence Dashboard listens and reloads its current history/profile.
-- Made For You listens and recalculates its adaptive recommendations.
-- The event contains no player/song state, so consumers cannot accidentally
-  use stale recommendation payloads.
+- Positive listening behavior reinforces candidates.
+- Replays provide diminishing reinforcement.
+- Skips strongly reduce ranking feedback.
+- Repeated low-value skips can suppress a track.
+- Feedback is bounded so one track cannot dominate ranking forever.
 
-Apply the supplied patches to the existing files in the repository.
-
-Verification:
-flutter analyze
-flutter test
-
-Expected architecture:
-Player event
- -> ListeningHistoryService persistence
- -> ListeningIntelligenceEvents
- -> Dashboard/profile refresh
- -> Made For You adaptive refresh
+Apply patches/adaptive_recommendation_feedback.patch after adding the service.
+Then run flutter analyze and flutter test.

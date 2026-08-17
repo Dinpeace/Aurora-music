@@ -1,0 +1,38 @@
+diff --git a/lib/data/services/adaptive_recommendation_service.dart b/lib/data/services/adaptive_recommendation_service.dart
+--- a/lib/data/services/adaptive_recommendation_service.dart
++++ b/lib/data/services/adaptive_recommendation_service.dart
+@@
+ import '../models/listening_history_entry.dart';
+ import '../models/online/online_song.dart';
++import 'recommendation_feedback_service.dart';
+ import 'taste_profile_service.dart';
+@@
+   AdaptiveRecommendationService({
+     this.explorationWeight = 0.18,
+     this.repetitionPenalty = 0.35,
+     this.skipPenalty = 2.5,
++    this.feedback = const RecommendationFeedbackService(),
+   });
+@@
+   final double repetitionPenalty;
+   final double skipPenalty;
++  final RecommendationFeedbackService feedback;
+@@
+       final base = TasteProfileService().rankSong(song, profile);
+       final historyEntry = historyById[id];
+-      final adaptive = _adaptiveAdjustment(historyEntry);
++      final adaptive = feedback.score(historyEntry);
++      if (feedback.shouldSuppress(historyEntry)) continue;
+       final exploration = historyEntry == null
+           ? _noveltyBonus(song, profile)
+           : 0.0;
+@@
+-  double _adaptiveAdjustment(ListeningHistoryEntry? entry) {
+-    if (entry == null) return 0.0;
+-
+-    final skips = entry.skipCount.clamp(0, 20).toDouble();
+-    final plays = entry.playCount.clamp(0, 50).toDouble();
+-
+-    return (plays * repetitionPenalty) - (skips * skipPenalty);
+-  }
+-
