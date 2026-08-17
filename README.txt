@@ -1,24 +1,26 @@
-Aurora Smart Queue Adaptive Integration v1
+Aurora Player → Intelligence Feedback v1
 
-Replaces SmartQueueService's static RecommendationEngine ranking with the
-existing AdaptiveRecommendationService.
+Adds PlayerIntelligenceTracker and a ready-to-apply PlayerController patch.
 
-Now Smart Queue considers:
-- repeated plays
-- skipped tracks
-- listening history
-- exploration of unfamiliar artists/albums
-- existing artist diversity
-- current queue exclusions
-
-The public SmartQueueService API now requires `history`, so callers should
-pass the current ListeningHistoryService entries.
+Flow:
+Player start
+  -> ListeningHistoryService
+Player progress >= 10s
+  -> meaningful-listen signal
+Manual next within 30s
+  -> skip signal
+Playback completion
+  -> completion signal
+  -> Listening History
+  -> Taste Profile / Adaptive Recommendations
+  -> Smart Queue / Radio / Made For You
 
 Files:
-lib/data/services/smart_queue_service.dart
-test/data/services/smart_queue_service_test.dart
+lib/data/services/player_intelligence_tracker.dart
+test/data/services/player_intelligence_tracker_test.dart
+patches/player_controller_intelligence.patch
 
-Run:
-flutter pub get
-flutter analyze
-flutter test
+Important:
+Apply the patch after adding the tracker. The patch is intentionally small and
+targets the existing PlayerController event points; do not replace the entire
+controller file.

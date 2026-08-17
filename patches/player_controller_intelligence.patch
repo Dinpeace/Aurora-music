@@ -1,0 +1,75 @@
+diff --git a/lib/features/player/player_controller.dart b/lib/features/player/player_controller.dart
+--- a/lib/features/player/player_controller.dart
++++ b/lib/features/player/player_controller.dart
+@@
+ import '../../data/models/online/online_song.dart';
+ import '../../data/models/song.dart';
+ import '../../data/repositories/online_repository.dart';
++import '../../data/services/listening_history_service.dart';
++import '../../data/services/playback_intelligence_bridge.dart';
++import '../../data/services/player_intelligence_tracker.dart';
+ import '../../core/providers/search_provider.dart';
+ import 'player_state.dart';
+@@
+   final OnlineRepository? _onlineRepository;
++  late final PlayerIntelligenceTracker _intelligence;
+@@
+   void _registerListeners() {
++    _intelligence = PlayerIntelligenceTracker(
++      bridge: PlaybackIntelligenceBridge(
++        history: ListeningHistoryService(),
++      ),
++    );
+     _initializePlayers();
+     _bindActivePlayerListeners();
+   }
+@@
+     _positionSubscription = _player.positionStream.listen((position) {
+       state = state.copyWith(position: position);
++      final song = state.currentSong;
++      if (song != null) {
++        _intelligence.onPositionChanged(
++          song: song,
++          position: position,
++        );
++      }
+       _maybeStartCrossfade();
+     });
+@@
+       if (playerState.processingState == ja.ProcessingState.completed &&
+           !_crossfadeInProgress) {
++        final song = state.currentSong;
++        if (song != null) {
++          _intelligence.onCompleted(song);
++        }
+         nextSong();
+       }
+@@
+       state = state.copyWith(
+         currentSong: song,
+@@
+         duration: _player.duration ?? song.duration,
+       );
++      await _intelligence.onStarted(song);
+@@
+   Future<void> nextSong() async {
+     if (state.currentSong == null || state.queue.isEmpty) {
+       return;
+     }
+
++    final currentSong = state.currentSong!;
+     final index = state.queue.indexWhere(
+       (song) => song.id == state.currentSong!.id,
+     );
+
+     if (index >= 0 && index < state.queue.length - 1) {
++      if (state.position <= const Duration(seconds: 30)) {
++        await _intelligence.onSkipped(
++          song: currentSong,
++          position: state.position,
++        );
++      }
+       await playSong(
+         state.queue[index + 1],
+         queue: state.queue,
+*** End Patch
