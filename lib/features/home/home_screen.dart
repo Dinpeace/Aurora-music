@@ -6,6 +6,7 @@ import '../library/library_screen.dart';
 import '../search/search_screen.dart';
 import '../settings/settings_screen.dart';
 
+import 'widgets/aurora_radio_section.dart';
 import 'widgets/greeting.dart';
 import 'widgets/home_header.dart';
 import 'widgets/made_for_you.dart';
@@ -20,6 +21,8 @@ class HomeScreen extends StatefulWidget {
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
+
+  // Existing Home navigation remains unchanged.
 }
 
 class _HomeScreenState extends State<HomeScreen> {
@@ -36,27 +39,19 @@ class _HomeScreenState extends State<HomeScreen> {
       case 1:
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const SearchScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const SearchScreen()),
         );
         break;
-
       case 2:
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const LibraryScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const LibraryScreen()),
         );
         break;
-
       case 3:
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => const SettingsScreen(),
-          ),
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
         );
         break;
     }
@@ -83,6 +78,8 @@ class _HomeScreenState extends State<HomeScreen> {
               FeaturedBanner(),
               SizedBox(height: 36),
               MadeForYouSection(),
+              SizedBox(height: 32),
+              AuroraRadioSection(),
               SizedBox(height: 32),
               RecentlyPlayed(),
               SizedBox(height: 32),
