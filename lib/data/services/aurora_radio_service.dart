@@ -34,15 +34,18 @@ class AuroraRadioService {
     final source = candidates.toList(growable: false);
     if (source.isEmpty) return const <OnlineSong>[];
 
-    mood ??= _mood.inferCurrentProfile();
-    final seedArtist = seed?.artist.trim().toLowerCase();
+    final activeMood = mood ?? _mood.inferCurrentProfile();
+    final seedId = seed?.id.trim().toLowerCase();
 
     Iterable<OnlineSong> filtered = source;
     switch (mode) {
       case AuroraRadioMode.song:
-        if (seed != null) filtered = _songRadioCandidates(source, seed);
+        if (seed != null) {
+          filtered = _songRadioCandidates(source, seed);
+        }
         break;
       case AuroraRadioMode.artist:
+        final seedArtist = seed?.artist.trim().toLowerCase();
         if (seedArtist != null && seedArtist.isNotEmpty) {
           filtered = source.where(
             (song) => song.artist.trim().toLowerCase() == seedArtist,
@@ -59,11 +62,26 @@ class AuroraRadioService {
       pool = source;
     }
 
+    final excluded = <String>{};
+    if (seedId != null && seedId.isNotEmpty) {
+      excluded.add(seedId);
+    }
+
+    // Mood is used as a discovery pre-filter. Adaptive ranking then applies
+    // the stronger long-term taste/history signals.
+    final moodRanked = _mood.rank(
+      pool,
+      activeMood,
+      excludedIds: excluded,
+    );
+
+    final moodPool = moodRanked.take(length * 3).toList(growable: false);
+
     final ranked = _adaptive.rank(
-      candidates: pool,
+      candidates: moodPool.isEmpty ? pool : moodPool,
       profile: profile,
       history: history,
-      excludedIds: seed == null ? const <String>{} : {seed.id},
+      excludedIds: excluded,
       limit: length * 2,
     );
 
@@ -71,7 +89,7 @@ class AuroraRadioService {
       candidates: ranked,
       profile: profile,
       history: history,
-      mood: mood,
+      mood: activeMood,
       length: length,
     );
 
@@ -80,7 +98,7 @@ class AuroraRadioService {
     return List<OnlineSong>.unmodifiable([
       seed,
       ...continuation.where(
-        (song) => song.id.trim().toLowerCase() != seed.id.trim().toLowerCase(),
+        (song) => song.id.trim().toLowerCase() != seedId,
       ),
     ].take(length));
   }
@@ -91,18 +109,19 @@ class AuroraRadioService {
   ) sync* {
     final seedArtist = seed.artist.trim().toLowerCase();
     final seedAlbum = seed.album.trim().toLowerCase();
+    final seedId = seed.id.trim().toLowerCase();
 
     for (final song in songs) {
+      final id = song.id.trim().toLowerCase();
+      if (id == seedId) continue;
+
       final artist = song.artist.trim().toLowerCase();
       final album = song.album.trim().toLowerCase();
-      if (song.id.trim().toLowerCase() == seed.id.trim().toLowerCase()) {
-        continue;
-      }
       if (artist == seedArtist || album == seedAlbum) yield song;
     }
 
     for (final song in songs) {
-      if (song.id.trim().toLowerCase() != seed.id.trim().toLowerCase()) {
+      if (song.id.trim().toLowerCase() != seedId) {
         yield song;
       }
     }

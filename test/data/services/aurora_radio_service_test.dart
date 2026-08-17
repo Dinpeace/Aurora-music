@@ -11,6 +11,7 @@ void main() {
   AuroraRadioService createService() {
     final mood = MoodEnergyService(session: SessionIntelligenceService());
     final adaptive = AdaptiveRecommendationService();
+
     return AuroraRadioService(
       adaptive: adaptive,
       smartQueue: SmartQueueService(adaptive: adaptive, mood: mood),
@@ -64,6 +65,47 @@ void main() {
 
     expect(result, hasLength(5));
   });
+
+  test('mood radio can use the active mood to filter discovery', () {
+    final result = createService().build(
+      candidates: [
+        _song('night', 'Night Artist', 'night chill album', 'night chill album'),
+        _song('party', 'Party Artist', 'dance party remix', 'dance party remix'),
+        _song('plain', 'Plain Artist', 'Album', 'Album'),
+      ],
+      profile: profile,
+      history: const [],
+      mode: AuroraRadioMode.mood,
+      mood: MoodProfile.night,
+      length: 2,
+    );
+
+    expect(result, hasLength(2));
+    expect(result.map((song) => song.id), contains('night'));
+  });
+
+  test('seed is excluded from the continuation', () {
+    final seed = _song('seed', 'Aurora', 'Album', 'Album');
+
+    final result = createService().build(
+      candidates: [
+        seed,
+        _song('one', 'Other', 'Album', 'Album'),
+        _song('two', 'Other', 'Other', 'Album'),
+      ],
+      profile: profile,
+      history: const [],
+      seed: seed,
+      mode: AuroraRadioMode.song,
+      length: 3,
+    );
+
+    expect(result.first.id, 'seed');
+    expect(
+      result.skip(1).map((song) => song.id),
+      isNot(contains('seed')),
+    );
+  });
 }
 
 OnlineSong _song(
@@ -79,6 +121,6 @@ OnlineSong _song(
     album: album,
     artwork: '',
     streamUrl: 'https://example.com/$id',
-    duration: Duration.zero,
+    duration: const Duration(minutes: 3),
   );
 }
