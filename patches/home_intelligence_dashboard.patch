@@ -1,0 +1,21 @@
+diff --git a/lib/features/home/home_screen.dart b/lib/features/home/home_screen.dart
+--- a/lib/features/home/home_screen.dart
++++ b/lib/features/home/home_screen.dart
+@@
+ import '../settings/settings_screen.dart';
++import '../intelligence/intelligence_dashboard_screen.dart';
+@@
+       case 3:
+         Navigator.push(
+           context,
+           MaterialPageRoute(builder: (_) => const SettingsScreen()),
+         );
+         break;
++      case 4:
++        Navigator.push(
++          context,
++          MaterialPageRoute(
++            builder: (_) => const IntelligenceDashboardScreen(),
++          ),
++        );
++        break;
