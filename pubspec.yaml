@@ -12,9 +12,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # -----------------------------
   # UI
-  # -----------------------------
   cupertino_icons: ^1.0.8
   google_fonts: ^6.3.1
   flutter_svg: ^2.2.1
@@ -22,43 +20,29 @@ dependencies:
   flutter_animate: ^4.5.2
   dynamic_color: ^1.7.0
 
-  # -----------------------------
   # State Management
-  # -----------------------------
   flutter_riverpod: ^2.6.1
 
-  # -----------------------------
   # Navigation
-  # -----------------------------
   go_router: ^16.3.0
 
-  # -----------------------------
   # Networking
-  # -----------------------------
   dio: ^5.11.0
 
-  # -----------------------------
   # Audio Engine
-  # -----------------------------
   just_audio: ^0.10.4
   just_audio_background: ^0.0.1-beta.17
   audio_service: ^0.18.18
   audio_session: ^0.2.2
   audio_video_progress_bar: ^2.0.3
 
-  # -----------------------------
   # Permissions
-  # -----------------------------
   permission_handler: ^12.0.3
 
-  # -----------------------------
   # Local Storage
-  # -----------------------------
   shared_preferences: ^2.5.3
 
-  # -----------------------------
   # Utilities
-  # -----------------------------
   intl: ^0.20.2
   collection: ^1.19.1
   pretty_dio_logger: ^1.4.0
@@ -70,7 +54,6 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_lints: ^6.0.0
 
 flutter:
