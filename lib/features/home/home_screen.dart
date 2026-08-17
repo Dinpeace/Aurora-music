@@ -8,6 +8,7 @@ import '../settings/settings_screen.dart';
 
 import 'widgets/greeting.dart';
 import 'widgets/home_header.dart';
+import 'widgets/made_for_you.dart';
 import 'widgets/mini_player.dart';
 import 'widgets/new_releases.dart';
 import 'widgets/recently_played.dart';
@@ -66,7 +67,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
       extendBody: true,
-
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -75,43 +75,28 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
               HomeHeader(),
-
               SizedBox(height: 28),
-
               GreetingSection(),
-
               SizedBox(height: 28),
-
               AuroraSearchBar(),
-
               SizedBox(height: 28),
-
               FeaturedBanner(),
-
               SizedBox(height: 36),
-
+              MadeForYouSection(),
+              SizedBox(height: 32),
               RecentlyPlayed(),
-
               SizedBox(height: 32),
-
               TrendingSection(),
-
               SizedBox(height: 32),
-
               NewReleases(),
-
               SizedBox(height: 32),
-
               TopArtistsSection(),
-
               SizedBox(height: 40),
             ],
           ),
         ),
       ),
-
       bottomSheet: const MiniPlayer(),
-
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         height: 72,
