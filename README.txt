@@ -1,28 +1,22 @@
-AURORA MUSIC — BULK PACK 1 CORRECTED DART FILES
+Aurora Adaptive Recommendations v1
 
-Replace these files directly:
+Adds an adaptive ranking layer on top of the existing TasteProfileService.
 
-lib/features/library/playlist_provider.dart
-lib/features/library/playlists_screen.dart
-lib/features/library/favorite_playback_screen.dart
+Behavior:
+- reinforces repeated listening
+- strongly lowers repeatedly skipped tracks
+- adds a small exploration bonus for unfamiliar artists/albums
+- keeps artist diversity in recommendation lists
+- supports exclusions and configurable result limits
 
-Correct project imports are based on the paths you provided:
+It does not replace TasteProfileService. It composes with the existing profile
+and Listening History data.
 
-favorite_provider.dart:
-lib/features/library/favorite_provider.dart
+Files:
+lib/data/services/adaptive_recommendation_service.dart
+test/data/services/adaptive_recommendation_service_test.dart
 
-player_controller.dart:
-lib/features/player/player_controller.dart
-
-online_song.dart:
-lib/data/models/online/online_song.dart
-
-The duplicate root-level:
-lib/favorite_provider.dart
-is NOT used by these files.
-
-After replacing the files, run:
-
+Run:
+flutter pub get
 flutter analyze
-
-Do not run a Python patch.
+flutter test
