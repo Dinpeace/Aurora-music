@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/online/online_song.dart';
 import '../../data/models/song.dart';
+import '../../data/services/adaptive_recommendation_service.dart';
 import '../../data/services/aurora_radio_service.dart';
+import '../../data/services/listening_history_service.dart';
 import '../../data/services/mood_energy_service.dart';
-import '../../data/services/recommendation_engine.dart';
 import '../../data/services/session_intelligence_service.dart';
 import '../../data/services/smart_queue_service.dart';
 import '../../data/services/taste_profile_service.dart';
@@ -13,11 +14,7 @@ import '../library/library_controller.dart';
 import '../player/player_controller.dart';
 
 class RadioScreen extends ConsumerStatefulWidget {
-  const RadioScreen({
-    super.key,
-    this.mode = AuroraRadioMode.personalized,
-    this.seed,
-  });
+  const RadioScreen({super.key, this.mode = AuroraRadioMode.personalized, this.seed});
 
   final AuroraRadioMode mode;
   final Song? seed;
@@ -39,7 +36,6 @@ class _RadioScreenState extends ConsumerState<RadioScreen> {
   Future<void> _load() async {
     final controller = ref.read(libraryControllerProvider.notifier);
     await controller.loadLibrary();
-
     if (!mounted) return;
 
     final library = ref.read(libraryControllerProvider);
@@ -48,24 +44,20 @@ class _RadioScreenState extends ConsumerState<RadioScreen> {
     final session = SessionIntelligenceService();
     final mood = MoodEnergyService(session: session);
     final taste = TasteProfileService();
-    final recommendations = RecommendationEngine(
-      taste: taste,
-      mood: mood,
-      session: session,
-    );
-    final queue = SmartQueueService(
-      recommendations: recommendations,
-      mood: mood,
-    );
+    final historyService = ListeningHistoryService();
+    await historyService.initialize();
+
+    final adaptive = AdaptiveRecommendationService();
+    final queue = SmartQueueService(adaptive: adaptive, mood: mood);
     final radio = AuroraRadioService(
-      recommendations: recommendations,
+      adaptive: adaptive,
       smartQueue: queue,
       mood: mood,
     );
 
     final favorites = songs.where((song) => song.favorite).toList();
     final profile = taste.build(
-      history: const [],
+      history: historyService.entries,
       favoriteArtists: favorites.map((song) => song.artist).toList(),
       favoriteIds: favorites.map((song) => song.id).toList(),
     );
@@ -76,21 +68,18 @@ class _RadioScreenState extends ConsumerState<RadioScreen> {
     final result = radio.build(
       candidates: candidates,
       profile: profile,
+      history: historyService.entries,
       mode: widget.mode,
       seed: seed,
       mood: mood.inferCurrentProfile(),
       length: 25,
     );
 
-    final byId = <String, Song>{
-      for (final song in songs) song.id: song,
-    };
+    final byId = <String, Song>{for (final song in songs) song.id: song};
 
+    if (!mounted) return;
     setState(() {
-      _songs = result
-          .map((song) => byId[song.id])
-          .whereType<Song>()
-          .toList(growable: false);
+      _songs = result.map((song) => byId[song.id]).whereType<Song>().toList(growable: false);
       _loading = false;
     });
   }
@@ -115,10 +104,7 @@ class _RadioScreenState extends ConsumerState<RadioScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _songs.isEmpty
               ? const Center(
-                  child: Text(
-                    'Not enough music for this radio.',
-                    style: TextStyle(color: Colors.white70),
-                  ),
+                  child: Text('Not enough music for this radio.', style: TextStyle(color: Colors.white70)),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -135,51 +121,29 @@ class _RadioScreenState extends ConsumerState<RadioScreen> {
                           child: song.artwork == null || song.artwork!.isEmpty
                               ? const ColoredBox(
                                   color: Color(0xFF18181B),
-                                  child: Icon(
-                                    Icons.music_note,
-                                    color: Colors.white54,
-                                  ),
+                                  child: Icon(Icons.music_note, color: Colors.white54),
                                 )
-                              : Image(
-                                  image: _artwork(song.artwork!),
-                                  fit: BoxFit.cover,
-                                ),
+                              : Image(image: _artwork(song.artwork!), fit: BoxFit.cover),
                         ),
                       ),
-                      title: Text(
-                        song.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      subtitle: Text(
-                        song.artist,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white60),
-                      ),
-                      onTap: () {
-                        ref
-                            .read(playerControllerProvider.notifier)
-                            .playSong(song, queue: _songs);
-                      },
+                      title: Text(song.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white)),
+                      subtitle: Text(song.artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white60)),
+                      onTap: () => ref.read(playerControllerProvider.notifier).playSong(song, queue: _songs),
                     );
                   },
                 ),
     );
   }
 
-  OnlineSong _toOnlineSong(Song song) {
-    return OnlineSong(
-      id: song.id,
-      title: song.title,
-      artist: song.artist,
-      album: song.album,
-      artwork: song.artwork ?? '',
-      streamUrl: song.audioUrl,
-      duration: song.duration,
-    );
-  }
+  OnlineSong _toOnlineSong(Song song) => OnlineSong(
+        id: song.id,
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        artwork: song.artwork ?? '',
+        streamUrl: song.audioUrl,
+        duration: song.duration,
+      );
 
   ImageProvider<Object> _artwork(String value) {
     if (value.startsWith('http://') || value.startsWith('https://')) {

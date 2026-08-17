@@ -1,25 +1,23 @@
+import '../models/listening_history_entry.dart';
 import '../models/online/online_song.dart';
+import 'adaptive_recommendation_service.dart';
 import 'mood_energy_service.dart';
-import 'recommendation_engine.dart';
 import 'taste_profile_service.dart';
 
-/// Builds a continuation queue from Aurora's existing recommendation signals.
-///
-/// This service is UI-agnostic: it returns OnlineSong objects and never starts
-/// playback or mutates the player's queue.
 class SmartQueueService {
   SmartQueueService({
-    required RecommendationEngine recommendations,
+    required AdaptiveRecommendationService adaptive,
     required MoodEnergyService mood,
-  })  : _recommendations = recommendations,
+  })  : _adaptive = adaptive,
         _mood = mood;
 
-  final RecommendationEngine _recommendations;
+  final AdaptiveRecommendationService _adaptive;
   final MoodEnergyService _mood;
 
   List<OnlineSong> build({
     required Iterable<OnlineSong> candidates,
     required TasteProfile profile,
+    required List<ListeningHistoryEntry> history,
     Iterable<OnlineSong> currentQueue = const <OnlineSong>[],
     MoodProfile? mood,
     int length = 12,
@@ -31,12 +29,14 @@ class SmartQueueService {
         .where((id) => id.isNotEmpty)
         .toSet();
 
-    final selectedMood = mood ?? _mood.inferCurrentProfile();
+    // Resolve the current mood so the queue remains aligned with the
+    // existing mood/session pipeline. Adaptive ranking consumes profile/history.
+    mood ??= _mood.inferCurrentProfile();
 
-    final ranked = _recommendations.rank(
+    final ranked = _adaptive.rank(
       candidates: candidates,
       profile: profile,
-      mood: selectedMood,
+      history: history,
       excludedIds: currentIds,
       limit: length * 3,
     );
@@ -53,7 +53,6 @@ class SmartQueueService {
 
       final artist = _normalize(song.artist);
       final used = artistCounts[artist] ?? 0;
-
       if (artist.isNotEmpty && used >= 2 && result.length < length - 1) {
         continue;
       }
@@ -65,10 +64,8 @@ class SmartQueueService {
     if (result.length < length) {
       for (final song in ranked) {
         if (result.length >= length) break;
-
         final id = _normalize(song.id);
         if (id.isEmpty || !seen.add(id)) continue;
-
         result.add(song);
       }
     }
@@ -80,38 +77,40 @@ class SmartQueueService {
     required Iterable<OnlineSong> candidates,
     required Iterable<OnlineSong> currentQueue,
     required TasteProfile profile,
+    required List<ListeningHistoryEntry> history,
     MoodProfile? mood,
     int additional = 5,
   }) {
-    if (additional <= 0) return List<OnlineSong>.unmodifiable(currentQueue);
+    if (additional <= 0) {
+      return List<OnlineSong>.unmodifiable(currentQueue);
+    }
 
     final existing = currentQueue.toList(growable: false);
     final additions = build(
       candidates: candidates,
-      profile: profile,
       currentQueue: existing,
+      profile: profile,
+      history: history,
       mood: mood,
       length: additional,
     );
 
-    return List<OnlineSong>.unmodifiable([
-      ...existing,
-      ...additions,
-    ]);
+    return List<OnlineSong>.unmodifiable([...existing, ...additions]);
   }
 
   List<OnlineSong> regenerate({
     required Iterable<OnlineSong> candidates,
     required Iterable<OnlineSong> currentQueue,
     required TasteProfile profile,
+    required List<ListeningHistoryEntry> history,
     MoodProfile? mood,
     int length = 12,
   }) {
-    final current = currentQueue.toList(growable: false);
     return append(
       candidates: candidates,
-      currentQueue: current,
+      currentQueue: currentQueue,
       profile: profile,
+      history: history,
       mood: mood,
       additional: length,
     );

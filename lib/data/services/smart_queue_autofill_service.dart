@@ -1,12 +1,9 @@
+import '../models/listening_history_entry.dart';
 import '../models/online/online_song.dart';
 import 'mood_energy_service.dart';
 import 'smart_queue_service.dart';
 import 'taste_profile_service.dart';
 
-/// Keeps a playback queue supplied with recommendation-driven continuation.
-///
-/// The player remains the owner of playback state. This coordinator only
-/// decides when more tracks are needed and returns the updated queue.
 class SmartQueueAutofillService {
   SmartQueueAutofillService({
     required SmartQueueService smartQueue,
@@ -24,9 +21,7 @@ class SmartQueueAutofillService {
   }) {
     if (queueLength <= 0 || currentIndex < 0) return false;
     if (currentIndex >= queueLength) return true;
-
-    final remaining = queueLength - currentIndex - 1;
-    return remaining <= threshold;
+    return queueLength - currentIndex - 1 <= threshold;
   }
 
   List<OnlineSong> autofill({
@@ -34,6 +29,7 @@ class SmartQueueAutofillService {
     required Iterable<OnlineSong> currentQueue,
     required int currentIndex,
     required TasteProfile profile,
+    required List<ListeningHistoryEntry> history,
     MoodProfile? mood,
     int threshold = 2,
     int additional = 5,
@@ -48,13 +44,14 @@ class SmartQueueAutofillService {
       return List<OnlineSong>.unmodifiable(queue);
     }
 
-    final selectedMood = mood ?? _mood.inferCurrentProfile();
+    mood ??= _mood.inferCurrentProfile();
 
     return _smartQueue.append(
       candidates: candidates,
       currentQueue: queue,
       profile: profile,
-      mood: selectedMood,
+      history: history,
+      mood: mood,
       additional: additional,
     );
   }
@@ -63,28 +60,28 @@ class SmartQueueAutofillService {
     required Iterable<OnlineSong> candidates,
     required Iterable<OnlineSong> currentQueue,
     required TasteProfile profile,
+    required List<ListeningHistoryEntry> history,
     MoodProfile? mood,
     int minimumLength = 8,
     int batchSize = 5,
   }) {
-    var queue = currentQueue.toList(growable: false);
-
+    final queue = currentQueue.toList(growable: false);
     if (queue.length >= minimumLength) {
       return List<OnlineSong>.unmodifiable(queue);
     }
 
-    final selectedMood = mood ?? _mood.inferCurrentProfile();
+    mood ??= _mood.inferCurrentProfile();
+
     final needed = minimumLength - queue.length;
     final additions = needed > batchSize ? batchSize : needed;
 
-    queue = _smartQueue.append(
+    return _smartQueue.append(
       candidates: candidates,
       currentQueue: queue,
       profile: profile,
-      mood: selectedMood,
+      history: history,
+      mood: mood,
       additional: additions,
     );
-
-    return List<OnlineSong>.unmodifiable(queue);
   }
 }

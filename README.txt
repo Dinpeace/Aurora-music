@@ -1,20 +1,22 @@
-Aurora Adaptive Recommendations v1
+Aurora Smart Queue Adaptive Integration v1
 
-Adds an adaptive ranking layer on top of the existing TasteProfileService.
+Replaces SmartQueueService's static RecommendationEngine ranking with the
+existing AdaptiveRecommendationService.
 
-Behavior:
-- reinforces repeated listening
-- strongly lowers repeatedly skipped tracks
-- adds a small exploration bonus for unfamiliar artists/albums
-- keeps artist diversity in recommendation lists
-- supports exclusions and configurable result limits
+Now Smart Queue considers:
+- repeated plays
+- skipped tracks
+- listening history
+- exploration of unfamiliar artists/albums
+- existing artist diversity
+- current queue exclusions
 
-It does not replace TasteProfileService. It composes with the existing profile
-and Listening History data.
+The public SmartQueueService API now requires `history`, so callers should
+pass the current ListeningHistoryService entries.
 
 Files:
-lib/data/services/adaptive_recommendation_service.dart
-test/data/services/adaptive_recommendation_service_test.dart
+lib/data/services/smart_queue_service.dart
+test/data/services/smart_queue_service_test.dart
 
 Run:
 flutter pub get
