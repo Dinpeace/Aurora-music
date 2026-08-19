@@ -1,13 +1,17 @@
-Aurora Recommendation Complete Fix v6
+Aurora Personalized Discovery Polish v1
 
-Replace the two service files included here. This is a complete replacement,
-not a patch, so it avoids patch-context mismatches.
+Adds reusable discovery-policy helpers to PersonalizedDiscoveryService:
 
-The ranking rules intentionally preserve skipped/recent tracks in the result
-while pushing them below fresh candidates.
+- isDiscoveryCandidate() identifies music that is new by track, artist and
+  album.
+- score() provides a shared service-level ranking entry point for future
+  Home/Radio/Daily Mix integrations.
 
-Then run:
+The existing rank() algorithm remains unchanged, including its strong
+recent-track penalty.
+
+Apply the patch, then run:
 flutter analyze
 flutter test
 
-Do not commit until the full suite has zero failures.
+Do not commit until the full suite passes.

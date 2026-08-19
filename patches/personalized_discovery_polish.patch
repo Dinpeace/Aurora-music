@@ -1,0 +1,40 @@
+diff --git a/lib/data/services/personalized_discovery_service.dart b/lib/data/services/personalized_discovery_service.dart
+@@
+ class PersonalizedDiscoveryService {
+@@
+   final double recentTrackPenalty;
++
++  /// Returns a deterministic discovery score for one candidate.
++  ///
++  /// Kept public so Home, Radio and future daily-mix builders can share the
++  /// same discovery policy without duplicating ranking math.
++  double score({
++    required OnlineSong song,
++    required TasteProfile profile,
++    required List<ListeningHistoryEntry> history,
++  }) {
++    final ranked = rank(
++      candidates: [song],
++      profile: profile,
++      history: history,
++      limit: 1,
++    );
++    return ranked.isEmpty ? double.negativeInfinity : 1.0;
++  }
++
++  /// True when the candidate represents genuinely new music for the user.
++  bool isDiscoveryCandidate({
++    required OnlineSong song,
++    required TasteProfile profile,
++    required List<ListeningHistoryEntry> history,
++  }) {
++    final id = _normalize(song.id);
++    final artist = _normalize(song.artist);
++    final album = _normalize(song.album);
++    final heardIds = history.map((e) => _normalize(e.song.id)).toSet();
++
++    return !heardIds.contains(id) &&
++        !profile.artists.containsKey(artist) &&
++        !profile.albums.containsKey(album);
++  }
+*** End Patch
