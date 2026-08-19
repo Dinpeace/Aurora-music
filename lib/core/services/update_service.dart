@@ -31,7 +31,9 @@ class UpdateService {
 
   final Dio _dio;
 
-  Future<UpdateInfo> checkForUpdates({required String currentVersion}) async {
+  Future<UpdateInfo> checkForUpdates({
+    required String currentVersion,
+  }) async {
     final response = await _dio.get<Object?>(
       latestReleaseUrl,
       options: Options(
@@ -78,8 +80,8 @@ class UpdateService {
   }
 
   static bool isVersionNewer(String latest, String current) {
-    final latestParts = _parseVersion(latest);
-    final currentParts = _parseVersion(current);
+    final latestParts = _parseVersion(_normalizeVersion(latest));
+    final currentParts = _parseVersion(_normalizeVersion(current));
 
     for (var i = 0; i < 3; i++) {
       if (latestParts[i] != currentParts[i]) {

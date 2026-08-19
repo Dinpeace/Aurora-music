@@ -1,19 +1,13 @@
-Aurora Recommendation Feedback Loop v2
+Aurora Recommendation Complete Fix v6
 
-Adds a dedicated, stateless feedback translator for existing listening history.
+Replace the two service files included here. This is a complete replacement,
+not a patch, so it avoids patch-context mismatches.
 
-Signals:
-- plays
-- completion position
-- replays
-- skips
+The ranking rules intentionally preserve skipped/recent tracks in the result
+while pushing them below fresh candidates.
 
-Behavior:
-- Positive listening behavior reinforces candidates.
-- Replays provide diminishing reinforcement.
-- Skips strongly reduce ranking feedback.
-- Repeated low-value skips can suppress a track.
-- Feedback is bounded so one track cannot dominate ranking forever.
+Then run:
+flutter analyze
+flutter test
 
-Apply patches/adaptive_recommendation_feedback.patch after adding the service.
-Then run flutter analyze and flutter test.
+Do not commit until the full suite has zero failures.
