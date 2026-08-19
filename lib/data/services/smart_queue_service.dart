@@ -44,10 +44,11 @@ class SmartQueueService {
       mood: activeMood,
     );
 
-    return _select(
+    return _selectTransitionAware(
       contextRanked,
       excludedIds: currentIds,
       length: length,
+      mood: activeMood,
     );
   }
 
@@ -65,18 +66,16 @@ class SmartQueueService {
 
     final existing = currentQueue.toList(growable: false);
 
-    final additions = build(
-      candidates: candidates,
-      currentQueue: existing,
-      profile: profile,
-      history: history,
-      mood: mood,
-      length: additional,
-    );
-
     return List<OnlineSong>.unmodifiable([
       ...existing,
-      ...additions,
+      ...build(
+        candidates: candidates,
+        currentQueue: existing,
+        profile: profile,
+        history: history,
+        mood: mood,
+        length: additional,
+      ),
     ]);
   }
 
@@ -106,14 +105,13 @@ class SmartQueueService {
 
     for (final song in ranked) {
       var score = 0.0;
-
       final session = _session;
+
       if (session != null) {
         score += session.scoreOnlineSong(song);
       }
 
       score += _mood.analyze(song, mood).score;
-
       scored.add(_ContextCandidate(song, score));
     }
 
@@ -126,9 +124,90 @@ class SmartQueueService {
           );
     });
 
-    return scored
-        .map<OnlineSong>((item) => item.song)
-        .toList(growable: false);
+    return scored.map((item) => item.song).toList(growable: false);
+  }
+
+  List<OnlineSong> _selectTransitionAware(
+    Iterable<OnlineSong> ranked, {
+    required Set<String> excludedIds,
+    required int length,
+    required MoodProfile mood,
+  }) {
+    final pool = ranked.toList(growable: false);
+    final result = <OnlineSong>[];
+    final seen = <String>{...excludedIds};
+
+    while (result.length < length) {
+      _TransitionCandidate? best;
+
+      for (final song in pool) {
+        final id = _normalize(song.id);
+        if (id.isEmpty || seen.contains(id)) continue;
+
+        final score = _transitionScore(
+          song,
+          previous: result.isEmpty ? null : result.last,
+          mood: mood,
+        );
+
+        final candidate = _TransitionCandidate(song, score);
+        if (best == null ||
+            candidate.score > best.score ||
+            (candidate.score == best.score &&
+                song.title.toLowerCase().compareTo(
+                      best.song.title.toLowerCase(),
+                    ) <
+                    0)) {
+          best = candidate;
+        }
+      }
+
+      if (best == null) break;
+
+      result.add(best.song);
+      seen.add(_normalize(best.song.id));
+    }
+
+    return List<OnlineSong>.unmodifiable(result);
+  }
+
+  double _transitionScore(
+    OnlineSong song, {
+    required OnlineSong? previous,
+    required MoodProfile mood,
+  }) {
+    if (previous == null) return 0.0;
+
+    final artist = _normalize(song.artist);
+    final previousArtist = _normalize(previous.artist);
+    final album = _normalize(song.album);
+    final previousAlbum = _normalize(previous.album);
+
+    var score = 0.0;
+
+    // Consecutive tracks from the same artist/album feel repetitive.
+    if (artist.isNotEmpty && artist == previousArtist) {
+      score -= 8.0;
+    }
+
+    if (album.isNotEmpty && album == previousAlbum) {
+      score -= 3.0;
+    }
+
+    // Keep mood continuity without requiring acoustic features from the
+    // online provider. MoodEnergyService already gives us the canonical
+    // metadata/session-based mood score.
+    final currentMood = _mood.analyze(song, mood);
+    final previousMood = _mood.analyze(previous, mood);
+    final moodDelta = (currentMood.score - previousMood.score).abs();
+
+    if (moodDelta <= 2.0) {
+      score += 1.0;
+    } else if (moodDelta >= 8.0) {
+      score -= 1.5;
+    }
+
+    return score;
   }
 
   Set<String> _ids(Iterable<OnlineSong> songs) => songs
@@ -136,53 +215,18 @@ class SmartQueueService {
       .where((id) => id.isNotEmpty)
       .toSet();
 
-  List<OnlineSong> _select(
-    Iterable<OnlineSong> ranked, {
-    required Set<String> excludedIds,
-    required int length,
-  }) {
-    final result = <OnlineSong>[];
-    final seen = <String>{...excludedIds};
-    final artistCounts = <String, int>{};
-
-    for (final song in ranked) {
-      if (result.length >= length) break;
-
-      final id = _normalize(song.id);
-      if (id.isEmpty || !seen.add(id)) continue;
-
-      final artist = _normalize(song.artist);
-      final count = artistCounts[artist] ?? 0;
-
-      if (artist.isNotEmpty && count >= 2 && result.length < length - 1) {
-        continue;
-      }
-
-      result.add(song);
-      if (artist.isNotEmpty) {
-        artistCounts[artist] = count + 1;
-      }
-    }
-
-    if (result.length < length) {
-      for (final song in ranked) {
-        if (result.length >= length) break;
-
-        final id = _normalize(song.id);
-        if (id.isEmpty || !seen.add(id)) continue;
-
-        result.add(song);
-      }
-    }
-
-    return List<OnlineSong>.unmodifiable(result);
-  }
-
   String _normalize(String value) => value.trim().toLowerCase();
 }
 
 class _ContextCandidate {
   const _ContextCandidate(this.song, this.score);
+
+  final OnlineSong song;
+  final double score;
+}
+
+class _TransitionCandidate {
+  const _TransitionCandidate(this.song, this.score);
 
   final OnlineSong song;
   final double score;

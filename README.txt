@@ -1,23 +1,20 @@
-Aurora Smart Queue v4 — Complete Compile Fix
+Aurora Smart Queue v5
 
-This replaces smart_queue_service.dart with a complete, type-safe v4
-implementation.
+Adds intelligent transition-aware queue selection on top of v4.
 
-Fixes:
-- removes invalid MoodProfile.energy access
-- removes invalid MoodProfile.valence access
-- uses MoodEnergyService.analyze(song, mood).score
-- defines _ContextCandidate
-- gives scored an explicit List<_ContextCandidate> type
-- keeps optional session ranking
-- preserves adaptive ranking, duplicate filtering, artist diversity,
-  append(), and regenerate()
+Signals:
+- adaptive recommendation remains the base ranking
+- session intelligence remains active
+- mood continuity comes from MoodEnergyService
+- consecutive same-artist tracks are penalized
+- consecutive same-album tracks are penalized
+- large mood-score jumps receive a small penalty
+- nearby mood continuity receives a small bonus
+- duplicate/current-queue protection remains intact
+- append/regenerate preserve the existing queue
 
-Replace:
-lib/data/services/smart_queue_service.dart
-
-Then run:
+Run:
 flutter analyze
 flutter test
 
-Do not commit until both are clean.
+Do not commit until all tests pass.
