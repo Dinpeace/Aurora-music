@@ -1,18 +1,18 @@
-Aurora Smart Queue v11
+Aurora Smart Queue v12
 
-Adaptive Session Intelligence.
+Session-Aware Queue Evolution.
 
-Adds a temporary session-mode layer on top of v10:
-- waits for enough evidence before switching modes
-- repeated skips can move the session toward Discovery
-- repeated successful plays can move the session toward Favorites
-- hysteresis prevents a single event from causing an abrupt switch
-- reset clears only temporary mode state
-- persistent TasteProfile/listening history are not modified
-- SmartQueueService can consume the inferred mode through buildWithSessionMode()
+Builds on v11 with:
+- smoothed temporary session confidence
+- gradual mode evolution instead of abrupt mode changes
+- Discovery from sustained skip pressure
+- Favorites from sustained repeated successful plays
+- temporary confidence independent of persistent taste
+- queue generation using the evolved session mode
+- reset clears only session-evolution state
 
-Run:
+Baseline target:
 flutter analyze
 flutter test
 
-Keep the existing 68-test baseline green before committing.
+Keep the existing 73-test suite green and add the v12 regression tests before commit.
