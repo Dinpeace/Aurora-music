@@ -24,13 +24,7 @@ class SmartQueueService {
   }) {
     if (length <= 0) return const <OnlineSong>[];
 
-    final currentIds = currentQueue
-        .map((song) => _normalize(song.id))
-        .where((id) => id.isNotEmpty)
-        .toSet();
-
-    // Resolve the current mood so the queue remains aligned with the
-    // existing mood/session pipeline. Adaptive ranking consumes profile/history.
+    final currentIds = _ids(currentQueue);
     mood ??= _mood.inferCurrentProfile();
 
     final ranked = _adaptive.rank(
@@ -41,36 +35,11 @@ class SmartQueueService {
       limit: length * 3,
     );
 
-    final result = <OnlineSong>[];
-    final seen = <String>{...currentIds};
-    final artistCounts = <String, int>{};
-
-    for (final song in ranked) {
-      if (result.length >= length) break;
-
-      final id = _normalize(song.id);
-      if (id.isEmpty || !seen.add(id)) continue;
-
-      final artist = _normalize(song.artist);
-      final used = artistCounts[artist] ?? 0;
-      if (artist.isNotEmpty && used >= 2 && result.length < length - 1) {
-        continue;
-      }
-
-      result.add(song);
-      if (artist.isNotEmpty) artistCounts[artist] = used + 1;
-    }
-
-    if (result.length < length) {
-      for (final song in ranked) {
-        if (result.length >= length) break;
-        final id = _normalize(song.id);
-        if (id.isEmpty || !seen.add(id)) continue;
-        result.add(song);
-      }
-    }
-
-    return List<OnlineSong>.unmodifiable(result);
+    return _select(
+      ranked,
+      excludedIds: currentIds,
+      length: length,
+    );
   }
 
   List<OnlineSong> append({
@@ -98,6 +67,8 @@ class SmartQueueService {
     return List<OnlineSong>.unmodifiable([...existing, ...additions]);
   }
 
+  /// Rebuilds only the portion after the current queue, preserving the
+  /// currently playing/queued songs and preventing duplicates.
   List<OnlineSong> regenerate({
     required Iterable<OnlineSong> candidates,
     required Iterable<OnlineSong> currentQueue,
@@ -114,6 +85,52 @@ class SmartQueueService {
       mood: mood,
       additional: length,
     );
+  }
+
+  Set<String> _ids(Iterable<OnlineSong> songs) => songs
+      .map((song) => _normalize(song.id))
+      .where((id) => id.isNotEmpty)
+      .toSet();
+
+  List<OnlineSong> _select(
+    Iterable<OnlineSong> ranked, {
+    required Set<String> excludedIds,
+    required int length,
+  }) {
+    final result = <OnlineSong>[];
+    final seen = <String>{...excludedIds};
+    final artistCounts = <String, int>{};
+
+    for (final song in ranked) {
+      if (result.length >= length) break;
+
+      final id = _normalize(song.id);
+      if (id.isEmpty || !seen.add(id)) continue;
+
+      final artist = _normalize(song.artist);
+      final count = artistCounts[artist] ?? 0;
+
+      // Avoid artist monopolies while still allowing the final slot to be
+      // filled when the candidate pool is small.
+      if (artist.isNotEmpty && count >= 2 && result.length < length - 1) {
+        continue;
+      }
+
+      result.add(song);
+      if (artist.isNotEmpty) artistCounts[artist] = count + 1;
+    }
+
+    if (result.length < length) {
+      for (final song in ranked) {
+        if (result.length >= length) break;
+
+        final id = _normalize(song.id);
+        if (id.isEmpty || !seen.add(id)) continue;
+        result.add(song);
+      }
+    }
+
+    return List<OnlineSong>.unmodifiable(result);
   }
 
   String _normalize(String value) => value.trim().toLowerCase();
