@@ -9,6 +9,7 @@ class AdaptiveRecommendationService {
     this.skipPenalty = 2.5,
     this.completionBonus = 1.25,
     this.recentSkipWindow = 5,
+    this.longTermWeight = 0.65,
   });
 
   final double explorationWeight;
@@ -16,6 +17,7 @@ class AdaptiveRecommendationService {
   final double skipPenalty;
   final double completionBonus;
   final int recentSkipWindow;
+  final double longTermWeight;
 
   List<OnlineSong> rank({
     required Iterable<OnlineSong> candidates,
@@ -31,6 +33,12 @@ class AdaptiveRecommendationService {
       for (final entry in history) _normalize(entry.song.id): entry,
     };
 
+    final longTermProfile = TasteProfileService().build(
+      history: history,
+      favoriteArtists: profile.favoriteArtists.toList(),
+      favoriteIds: profile.favoriteIds.toList(),
+    );
+
     final scored = <_Candidate>[];
 
     for (final song in candidates) {
@@ -39,6 +47,7 @@ class AdaptiveRecommendationService {
 
       final entry = historyById[id];
       final base = TasteProfileService().rankSong(song, profile);
+      final stable = TasteProfileService().rankSong(song, longTermProfile);
       final adaptive = _adaptiveAdjustment(entry);
       final exploration =
           entry == null ? _noveltyBonus(song, profile) : 0.0;
@@ -46,7 +55,10 @@ class AdaptiveRecommendationService {
       scored.add(
         _Candidate(
           song: song,
-          score: base + adaptive + exploration,
+          score: base +
+              (stable * longTermWeight) +
+              adaptive +
+              exploration,
         ),
       );
     }
@@ -68,9 +80,7 @@ class AdaptiveRecommendationService {
       final artist = _normalize(candidate.song.artist);
       final count = artistCounts[artist] ?? 0;
 
-      if (artist.isNotEmpty && count >= 3 && scored.length > limit) {
-        continue;
-      }
+      if (artist.isNotEmpty && count >= 3 && scored.length > limit) continue;
 
       selected.add(candidate.song);
       if (artist.isNotEmpty) artistCounts[artist] = count + 1;
@@ -126,11 +136,7 @@ class AdaptiveRecommendationService {
 }
 
 class _Candidate {
-  const _Candidate({
-    required this.song,
-    required this.score,
-  });
-
+  const _Candidate({required this.song, required this.score});
   final OnlineSong song;
   final double score;
 }

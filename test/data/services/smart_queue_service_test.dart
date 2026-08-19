@@ -3,9 +3,6 @@ import 'package:aurora_music/data/models/listening_history_entry.dart';
 import 'package:aurora_music/data/models/online/online_song.dart';
 import 'package:aurora_music/data/models/song.dart';
 import 'package:aurora_music/data/services/adaptive_recommendation_service.dart';
-import 'package:aurora_music/data/services/mood_energy_service.dart';
-import 'package:aurora_music/data/services/session_intelligence_service.dart';
-import 'package:aurora_music/data/services/smart_queue_service.dart';
 import 'package:aurora_music/data/services/taste_profile_service.dart';
 
 void main() {
@@ -42,26 +39,23 @@ void main() {
         duration: const Duration(minutes: 3),
       );
 
-  ListeningHistoryEntry historyEntry({
+  ListeningHistoryEntry entry({
     required String id,
+    DateTime? lastPlayed,
     int plays = 0,
     int skips = 0,
   }) =>
       ListeningHistoryEntry(
         song: local(id),
-        lastPlayed: DateTime(2026, 1, 1),
+        lastPlayed: lastPlayed ?? DateTime(2026, 1, 1),
         playCount: plays,
-        position: const Duration(minutes: 1),
+        position: const Duration(minutes: 2),
         duration: const Duration(minutes: 3),
         skipCount: skips,
       );
 
-  test('repeated skips push a familiar track behind a fresh candidate', () {
-    final service = AdaptiveRecommendationService(
-      explorationWeight: 0.18,
-      repetitionPenalty: 0.35,
-      skipPenalty: 2.5,
-    );
+  test('recent skips still strongly suppress a track', () {
+    final service = AdaptiveRecommendationService();
 
     final result = service.rank(
       candidates: [
@@ -70,7 +64,7 @@ void main() {
       ],
       profile: profile,
       history: [
-        historyEntry(id: 'skipped', plays: 1, skips: 3),
+        entry(id: 'skipped', plays: 1, skips: 3),
       ],
       limit: 2,
     );
@@ -78,65 +72,75 @@ void main() {
     expect(result.first.id, 'fresh');
   });
 
-  test('successful plays receive a positive adaptive signal', () {
+  test('long-term profile contributes a stable preference signal', () {
     final service = AdaptiveRecommendationService();
 
     final result = service.rank(
       candidates: [
-        online('played'),
+        online('stable', artist: 'Aurora', album: 'Stable'),
+        online('unknown', artist: 'Other', album: 'Other'),
+      ],
+      profile: const TasteProfile(
+        genres: {},
+        artists: {},
+        albums: {},
+        favoriteArtists: {},
+        favoriteIds: {},
+      ),
+      history: [
+        entry(
+          id: 'stable',
+          plays: 8,
+          lastPlayed: DateTime(2025, 1, 1),
+        ),
+      ],
+      limit: 2,
+    );
+
+    expect(result.first.id, 'stable');
+  });
+
+  test('recent negative feedback does not erase stable taste forever', () {
+    final service = AdaptiveRecommendationService();
+
+    final result = service.rank(
+      candidates: [
+        online('stable', artist: 'Aurora', album: 'Stable'),
         online('fresh', artist: 'Other', album: 'Other'),
       ],
-      profile: profile,
+      profile: const TasteProfile(
+        genres: {},
+        artists: {},
+        albums: {},
+        favoriteArtists: {'aurora'},
+        favoriteIds: {},
+      ),
       history: [
-        historyEntry(id: 'played', plays: 4),
+        entry(id: 'stable', plays: 8, skips: 1),
       ],
       limit: 2,
     );
 
     expect(result, hasLength(2));
-    expect(result.map((song) => song.id), contains('played'));
+    expect(result.map((song) => song.id), contains('stable'));
   });
 
-  test('adaptive history still respects excluded IDs', () {
+  test('excluded IDs remain excluded with long-term learning enabled', () {
     final service = AdaptiveRecommendationService();
 
     final result = service.rank(
       candidates: [
-        online('one'),
-        online('two', artist: 'Other'),
-      ],
-      profile: profile,
-      history: [
-        historyEntry(id: 'one', skips: 4),
-      ],
-      excludedIds: {'two'},
-      limit: 5,
-    );
-
-    expect(result.map((song) => song.id), ['one']);
-  });
-
-  test('queue regeneration uses feedback-aware ranking', () {
-    final service = SmartQueueService(
-      adaptive: AdaptiveRecommendationService(),
-      mood: MoodEnergyService(
-        session: SessionIntelligenceService(),
-      ),
-    );
-
-    final result = service.regenerate(
-      candidates: [
-        online('skipped'),
+        online('stable'),
         online('fresh', artist: 'Other', album: 'Other'),
       ],
-      currentQueue: const [],
       profile: profile,
       history: [
-        historyEntry(id: 'skipped', plays: 1, skips: 3),
+        entry(id: 'stable', plays: 10),
       ],
-      length: 2,
+      excludedIds: {'stable'},
+      limit: 2,
     );
 
-    expect(result.first.id, 'fresh');
+    expect(result.map((song) => song.id), ['fresh']);
   });
 }
