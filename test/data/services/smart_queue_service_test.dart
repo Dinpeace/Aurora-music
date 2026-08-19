@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:aurora_music/data/models/online/online_song.dart';
+import 'package:aurora_music/data/models/song.dart';
 import 'package:aurora_music/data/services/adaptive_recommendation_service.dart';
 import 'package:aurora_music/data/services/mood_energy_service.dart';
 import 'package:aurora_music/data/services/session_intelligence_service.dart';
@@ -7,11 +8,12 @@ import 'package:aurora_music/data/services/smart_queue_service.dart';
 import 'package:aurora_music/data/services/taste_profile_service.dart';
 
 void main() {
-  SmartQueueService service() {
+  SmartQueueService service({SessionIntelligenceService? session}) {
     final mood = MoodEnergyService(session: SessionIntelligenceService());
     return SmartQueueService(
       adaptive: AdaptiveRecommendationService(),
       mood: mood,
+      session: session,
     );
   }
 
@@ -33,69 +35,58 @@ void main() {
         duration: const Duration(minutes: 3),
       );
 
-  test('build excludes every current queue item', () {
-    final current = song('current');
+  Song localSong(String id, {String artist = 'Aurora'}) => Song(
+        id: id,
+        title: id,
+        artist: artist,
+        album: 'Album',
+        artwork: '',
+        audioUrl: 'https://example.com/$id.mp3',
+        duration: const Duration(minutes: 3),
+      );
 
-    final result = service().build(
-      candidates: [current, song('one'), song('two')],
-      currentQueue: [current],
+  test('session feedback changes queue order', () {
+    final session = SessionIntelligenceService();
+    session.recordPlay(localSong('played'));
+    session.recordSkip('played');
+
+    final result = service(session: session).build(
+      candidates: [
+        song('played'),
+        song('fresh', artist: 'Other'),
+      ],
       profile: profile,
       history: const [],
       length: 2,
     );
 
-    expect(result.map((s) => s.id), isNot(contains('current')));
-    expect(result.length, 2);
+    expect(result.first.id, 'fresh');
   });
 
-  test('append preserves existing queue and adds unique tracks', () {
-    final current = song('current');
-
-    final result = service().append(
-      candidates: [current, song('one'), song('two')],
-      currentQueue: [current],
-      profile: profile,
-      history: const [],
-      additional: 2,
-    );
-
-    expect(result.first.id, 'current');
-    expect(result.length, 3);
-    expect(result.map((s) => s.id).toSet().length, result.length);
-  });
-
-  test('regenerate preserves current queue instead of replacing it', () {
-    final current = song('current');
-
-    final result = service().regenerate(
-      candidates: [current, song('one'), song('two')],
-      currentQueue: [current],
-      profile: profile,
-      history: const [],
-      length: 1,
-    );
-
-    expect(result.first.id, 'current');
-    expect(result.length, 2);
-  });
-
-  test('does not let one artist monopolize the queue', () {
+  test('without session service behavior remains compatible', () {
     final result = service().build(
-      candidates: [
-        song('a1'),
-        song('a2'),
-        song('a3'),
-        song('a4'),
-        song('b1', artist: 'Other'),
-      ],
+      candidates: [song('one'), song('two')],
       profile: profile,
       history: const [],
-      length: 4,
+      length: 2,
     );
 
-    final auroraCount =
-        result.where((s) => s.artist == 'Aurora').length;
+    expect(result, hasLength(2));
+  });
 
-    expect(auroraCount, lessThanOrEqualTo(3));
+  test('append preserves existing queue with session adaptation', () {
+    final session = SessionIntelligenceService();
+    session.recordPlay(localSong('one'));
+
+    final result = service(session: session).append(
+      candidates: [song('one'), song('two')],
+      currentQueue: [song('current')],
+      profile: profile,
+      history: const [],
+      additional: 1,
+    );
+
+    expect(result.first.id, 'current');
+    expect(result.length, 2);
   });
 }

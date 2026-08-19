@@ -1,17 +1,18 @@
-Aurora Personalized Discovery Polish v1
+Aurora Smart Queue v3
 
-Adds reusable discovery-policy helpers to PersonalizedDiscoveryService:
+Adds optional session-aware queue adaptation using the existing
+SessionIntelligenceService.
 
-- isDiscoveryCandidate() identifies music that is new by track, artist and
-  album.
-- score() provides a shared service-level ranking entry point for future
-  Home/Radio/Daily Mix integrations.
+Behavior:
+- current session plays/skips influence queue ordering
+- skipped session tracks are pushed down
+- played artists can receive session preference
+- existing SmartQueueService callers remain compatible because session is
+  optional
+- append/regenerate automatically inherit session-aware ordering
 
-The existing rank() algorithm remains unchanged, including its strong
-recent-track penalty.
-
-Apply the patch, then run:
+Run:
 flutter analyze
 flutter test
 
-Do not commit until the full suite passes.
+Do not commit until all tests pass.
