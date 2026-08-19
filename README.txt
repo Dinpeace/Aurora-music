@@ -1,23 +1,18 @@
-Aurora Smart Queue v10
+Aurora Smart Queue v11
 
-Context-aware listening modes built on v9.
+Adaptive Session Intelligence.
 
-Modes:
-- Balanced: normal recommendation behavior
-- Focus: favors focus/ambient/lo-fi metadata and smoother transitions
-- Chill: favors acoustic/chill/ambient/lo-fi metadata
-- Discovery: favors unfamiliar artists/albums
-- Favorites: favors known favorite artists/albums
-
-Design:
-- mode is a per-queue context, not a permanent taste-profile mutation
-- v9 time-aware preference decay remains active underneath
-- recent feedback remains active
-- transition logic adapts to the selected mode
-- current queue exclusions remain enforced
+Adds a temporary session-mode layer on top of v10:
+- waits for enough evidence before switching modes
+- repeated skips can move the session toward Discovery
+- repeated successful plays can move the session toward Favorites
+- hysteresis prevents a single event from causing an abrupt switch
+- reset clears only temporary mode state
+- persistent TasteProfile/listening history are not modified
+- SmartQueueService can consume the inferred mode through buildWithSessionMode()
 
 Run:
 flutter analyze
 flutter test
 
-Do not commit until all tests pass.
+Keep the existing 68-test baseline green before committing.
