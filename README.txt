@@ -1,12 +1,14 @@
-Aurora Smart Queue v6
+Aurora Smart Queue v7
 
-Adaptive queue regeneration built on v5:
-- regeneration preserves the existing queue
-- already queued tracks are excluded from newly generated additions
-- repeated append/regenerate calls remain duplicate-safe
-- non-positive regeneration length is a no-op
-- transition-aware ordering remains active
-- adaptive, session and mood ranking remain the foundation
+Feedback-aware queue learning built on v6.
+
+Signals:
+- repeated skips receive progressively stronger negative weighting
+- successful plays receive a positive adaptive signal
+- fresh tracks retain novelty exploration
+- excluded IDs remain respected
+- Smart Queue regeneration automatically consumes the improved ranking
+- v5 transition logic remains intact
 
 Run:
 flutter analyze

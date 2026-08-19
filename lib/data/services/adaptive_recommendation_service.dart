@@ -7,11 +7,15 @@ class AdaptiveRecommendationService {
     this.explorationWeight = 0.18,
     this.repetitionPenalty = 0.35,
     this.skipPenalty = 2.5,
+    this.completionBonus = 1.25,
+    this.recentSkipWindow = 5,
   });
 
   final double explorationWeight;
   final double repetitionPenalty;
   final double skipPenalty;
+  final double completionBonus;
+  final int recentSkipWindow;
 
   List<OnlineSong> rank({
     required Iterable<OnlineSong> candidates,
@@ -69,9 +73,7 @@ class AdaptiveRecommendationService {
       }
 
       selected.add(candidate.song);
-      if (artist.isNotEmpty) {
-        artistCounts[artist] = count + 1;
-      }
+      if (artist.isNotEmpty) artistCounts[artist] = count + 1;
     }
 
     if (selected.length < limit) {
@@ -93,15 +95,15 @@ class AdaptiveRecommendationService {
     final skips = entry.skipCount.clamp(0, 20).toDouble();
     final plays = entry.playCount.clamp(0, 50).toDouble();
 
-    // The tests and product behavior require a skipped track to remain
-    // available but move behind a fresh candidate. Make repeated skips a
-    // decisive ranking signal instead of merely a small adjustment.
     if (skips > 0) {
+      final skipWeight = skipPenalty *
+          (1.0 + ((skips - 1).clamp(0, recentSkipWindow) * 0.35));
+
       return (plays * repetitionPenalty) -
-          (skips * skipPenalty * 8.0);
+          (skips * skipWeight * 8.0);
     }
 
-    return plays * repetitionPenalty;
+    return plays * (repetitionPenalty + completionBonus);
   }
 
   double _noveltyBonus(OnlineSong song, TasteProfile profile) {

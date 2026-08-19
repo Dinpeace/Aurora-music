@@ -86,13 +86,9 @@ class SmartQueueService {
   }) {
     if (length <= 0) return List<OnlineSong>.unmodifiable(currentQueue);
 
-    final existing = currentQueue.toList(growable: false);
-
-    // Only candidates not already queued are considered. This makes repeated
-    // regeneration safe and prevents a weak track from being reintroduced.
     return append(
       candidates: candidates,
-      currentQueue: existing,
+      currentQueue: currentQueue,
       profile: profile,
       history: history,
       mood: mood,
@@ -108,8 +104,8 @@ class SmartQueueService {
 
     for (final song in ranked) {
       var score = 0.0;
-
       final session = _session;
+
       if (session != null) {
         score += session.scoreOnlineSong(song);
       }
