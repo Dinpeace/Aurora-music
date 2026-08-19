@@ -2,12 +2,6 @@ import '../models/listening_history_entry.dart';
 import '../models/online/online_song.dart';
 import 'taste_profile_service.dart';
 
-/// Applies adaptive behavior on top of Aurora's existing TasteProfile.
-///
-/// The base taste profile already accounts for plays, recency, completion,
-/// skips, favorites, artists, albums and inferred genres. This layer adds
-/// explicit exploration controls and per-track penalties so recommendations
-/// can adapt without changing the underlying profile format.
 class AdaptiveRecommendationService {
   AdaptiveRecommendationService({
     this.explorationWeight = 0.18,
@@ -39,12 +33,11 @@ class AdaptiveRecommendationService {
       final id = _normalize(song.id);
       if (id.isEmpty || excluded.contains(id)) continue;
 
+      final entry = historyById[id];
       final base = TasteProfileService().rankSong(song, profile);
-      final historyEntry = historyById[id];
-      final adaptive = _adaptiveAdjustment(historyEntry);
-      final exploration = historyEntry == null
-          ? _noveltyBonus(song, profile)
-          : 0.0;
+      final adaptive = _adaptiveAdjustment(entry);
+      final exploration =
+          entry == null ? _noveltyBonus(song, profile) : 0.0;
 
       scored.add(
         _Candidate(
@@ -57,7 +50,9 @@ class AdaptiveRecommendationService {
     scored.sort((a, b) {
       final score = b.score.compareTo(a.score);
       if (score != 0) return score;
-      return a.song.title.toLowerCase().compareTo(b.song.title.toLowerCase());
+      return a.song.title.toLowerCase().compareTo(
+            b.song.title.toLowerCase(),
+          );
     });
 
     final selected = <OnlineSong>[];
@@ -69,7 +64,6 @@ class AdaptiveRecommendationService {
       final artist = _normalize(candidate.song.artist);
       final count = artistCounts[artist] ?? 0;
 
-      // Keep a healthy amount of artist diversity.
       if (artist.isNotEmpty && count >= 3 && scored.length > limit) {
         continue;
       }
@@ -80,12 +74,11 @@ class AdaptiveRecommendationService {
       }
     }
 
-    // If diversity filtering left us short, fill from the remaining ranking.
     if (selected.length < limit) {
-      final selectedIds = selected.map((song) => _normalize(song.id)).toSet();
+      final ids = selected.map((song) => _normalize(song.id)).toSet();
       for (final candidate in scored) {
         if (selected.length >= limit) break;
-        if (selectedIds.add(_normalize(candidate.song.id))) {
+        if (ids.add(_normalize(candidate.song.id))) {
           selected.add(candidate.song);
         }
       }
@@ -100,15 +93,18 @@ class AdaptiveRecommendationService {
     final skips = entry.skipCount.clamp(0, 20).toDouble();
     final plays = entry.playCount.clamp(0, 50).toDouble();
 
-    // Frequently skipped tracks should fall down the list; repeatedly played
-    // tracks get a smaller positive reinforcement.
-    return (plays * repetitionPenalty) - (skips * skipPenalty);
+    // The tests and product behavior require a skipped track to remain
+    // available but move behind a fresh candidate. Make repeated skips a
+    // decisive ranking signal instead of merely a small adjustment.
+    if (skips > 0) {
+      return (plays * repetitionPenalty) -
+          (skips * skipPenalty * 8.0);
+    }
+
+    return plays * repetitionPenalty;
   }
 
-  double _noveltyBonus(
-    OnlineSong song,
-    TasteProfile profile,
-  ) {
+  double _noveltyBonus(OnlineSong song, TasteProfile profile) {
     final artist = _normalize(song.artist);
     final album = _normalize(song.album);
 
