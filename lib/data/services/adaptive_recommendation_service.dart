@@ -10,6 +10,8 @@ class AdaptiveRecommendationService {
     this.completionBonus = 1.25,
     this.recentSkipWindow = 5,
     this.longTermWeight = 0.65,
+    this.longTermDecayDays = 180.0,
+    this.shortTermWeight = 1.0,
   });
 
   final double explorationWeight;
@@ -18,6 +20,8 @@ class AdaptiveRecommendationService {
   final double completionBonus;
   final int recentSkipWindow;
   final double longTermWeight;
+  final double longTermDecayDays;
+  final double shortTermWeight;
 
   List<OnlineSong> rank({
     required Iterable<OnlineSong> candidates,
@@ -52,11 +56,14 @@ class AdaptiveRecommendationService {
       final exploration =
           entry == null ? _noveltyBonus(song, profile) : 0.0;
 
+      final ageWeight = _longTermAgeWeight(entry);
+      final stableContribution = stable * longTermWeight * ageWeight;
+
       scored.add(
         _Candidate(
           song: song,
-          score: base +
-              (stable * longTermWeight) +
+          score: (base * shortTermWeight) +
+              stableContribution +
               adaptive +
               exploration,
         ),
@@ -114,6 +121,25 @@ class AdaptiveRecommendationService {
     }
 
     return plays * (repetitionPenalty + completionBonus);
+  }
+
+  /// Old taste gradually becomes less influential, while recent behavior
+  /// remains strong. The floor prevents long-loved preferences from vanishing.
+  double _longTermAgeWeight(ListeningHistoryEntry? entry) {
+    if (entry == null) return 0.0;
+
+    final days = DateTime.now()
+        .difference(entry.lastPlayed)
+        .inHours
+        .clamp(0, 3650) /
+        24.0;
+
+    final decayDays = longTermDecayDays <= 0 ? 1.0 : longTermDecayDays;
+    final exponential = 1.0 / (1.0 + (days / decayDays));
+
+    // Keep at least 20% of a mature preference so a long-loved artist/genre
+    // does not disappear solely because the listener took a break.
+    return 0.20 + (0.80 * exponential);
   }
 
   double _noveltyBonus(OnlineSong song, TasteProfile profile) {

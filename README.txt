@@ -1,15 +1,15 @@
-Aurora Smart Queue v8
+Aurora Smart Queue v9
 
-Long-term preference learning built on v7.
+Time-aware preference decay built on v8.
 
 Signals:
-- current profile remains the primary taste signal
-- a stable profile is rebuilt from listening history
-- long-term preference contributes with a controlled weight
-- recent skip/play feedback remains decisive
-- fresh tracks retain exploration/novelty
+- recent taste is weighted more strongly
+- historical taste decays gradually with age
+- mature preferences retain a 20% floor
+- recent skips remain decisive
+- exploration remains available for unseen tracks
 - excluded IDs remain respected
-- temporary negative feedback does not permanently erase stable taste
+- v8 long-term preference learning remains the foundation
 
 Run:
 flutter analyze
