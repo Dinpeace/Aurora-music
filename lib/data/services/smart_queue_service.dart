@@ -39,10 +39,7 @@ class SmartQueueService {
       limit: length * 5,
     );
 
-    final contextRanked = _applyContextRanking(
-      ranked,
-      mood: activeMood,
-    );
+    final contextRanked = _applyContextRanking(ranked, mood: activeMood);
 
     return _selectTransitionAware(
       contextRanked,
@@ -87,9 +84,15 @@ class SmartQueueService {
     MoodProfile? mood,
     int length = 12,
   }) {
+    if (length <= 0) return List<OnlineSong>.unmodifiable(currentQueue);
+
+    final existing = currentQueue.toList(growable: false);
+
+    // Only candidates not already queued are considered. This makes repeated
+    // regeneration safe and prevents a weak track from being reintroduced.
     return append(
       candidates: candidates,
-      currentQueue: currentQueue,
+      currentQueue: existing,
       profile: profile,
       history: history,
       mood: mood,
@@ -105,8 +108,8 @@ class SmartQueueService {
 
     for (final song in ranked) {
       var score = 0.0;
-      final session = _session;
 
+      final session = _session;
       if (session != null) {
         score += session.scoreOnlineSong(song);
       }
@@ -118,7 +121,6 @@ class SmartQueueService {
     scored.sort((a, b) {
       final comparison = b.score.compareTo(a.score);
       if (comparison != 0) return comparison;
-
       return a.song.title.toLowerCase().compareTo(
             b.song.title.toLowerCase(),
           );
@@ -185,18 +187,9 @@ class SmartQueueService {
 
     var score = 0.0;
 
-    // Consecutive tracks from the same artist/album feel repetitive.
-    if (artist.isNotEmpty && artist == previousArtist) {
-      score -= 8.0;
-    }
+    if (artist.isNotEmpty && artist == previousArtist) score -= 8.0;
+    if (album.isNotEmpty && album == previousAlbum) score -= 3.0;
 
-    if (album.isNotEmpty && album == previousAlbum) {
-      score -= 3.0;
-    }
-
-    // Keep mood continuity without requiring acoustic features from the
-    // online provider. MoodEnergyService already gives us the canonical
-    // metadata/session-based mood score.
     final currentMood = _mood.analyze(song, mood);
     final previousMood = _mood.analyze(previous, mood);
     final moodDelta = (currentMood.score - previousMood.score).abs();
@@ -220,14 +213,12 @@ class SmartQueueService {
 
 class _ContextCandidate {
   const _ContextCandidate(this.song, this.score);
-
   final OnlineSong song;
   final double score;
 }
 
 class _TransitionCandidate {
   const _TransitionCandidate(this.song, this.score);
-
   final OnlineSong song;
   final double score;
 }

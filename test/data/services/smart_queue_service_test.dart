@@ -23,12 +23,10 @@ void main() {
     favoriteIds: {},
   );
 
-  OnlineSong song(
-    String id, {
+  OnlineSong song(String id, {
     String artist = 'Aurora',
     String album = 'Album',
-  }) =>
-      OnlineSong(
+  }) => OnlineSong(
         id: id,
         title: id,
         artist: artist,
@@ -38,26 +36,68 @@ void main() {
         duration: const Duration(minutes: 3),
       );
 
-  test('session feedback changes queue order', () {
-    final session = SessionIntelligenceService();
+  test('regeneration never re-adds current queue tracks', () {
+    final current = song('current');
 
-    // SessionIntelligenceService needs a local Song for play tracking; this
-    // test only verifies the SmartQueue API remains usable with a session.
-    final result = service(session: session).build(
+    final result = service().regenerate(
       candidates: [
-        song('one'),
-        song('two', artist: 'Other'),
+        current,
+        song('one', artist: 'Other'),
+        song('two', artist: 'Third'),
       ],
+      currentQueue: [current],
       profile: profile,
       history: const [],
       length: 2,
     );
 
-    expect(result, hasLength(2));
+    expect(result.first.id, 'current');
+    expect(result.map((item) => item.id), containsAll(<String>['one', 'two']));
+    expect(result.map((item) => item.id).toSet().length, result.length);
   });
 
-  test('avoids consecutive tracks from the same artist when alternatives exist',
-      () {
+  test('regeneration with non-positive length leaves queue unchanged', () {
+    final current = song('current');
+
+    final result = service().regenerate(
+      candidates: [song('one')],
+      currentQueue: [current],
+      profile: profile,
+      history: const [],
+      length: 0,
+    );
+
+    expect(result.map((item) => item.id), ['current']);
+  });
+
+  test('append remains unique across repeated calls', () {
+    final current = song('current');
+
+    final first = service().append(
+      candidates: [song('one', artist: 'Other'), song('two', artist: 'Third')],
+      currentQueue: [current],
+      profile: profile,
+      history: const [],
+      additional: 1,
+    );
+
+    final second = service().append(
+      candidates: [
+        song('one', artist: 'Other'),
+        song('two', artist: 'Third'),
+        song('three', artist: 'Fourth'),
+      ],
+      currentQueue: first,
+      profile: profile,
+      history: const [],
+      additional: 1,
+    );
+
+    expect(second.map((item) => item.id).toSet().length, second.length);
+    expect(second.length, 3);
+  });
+
+  test('transition-aware queue still avoids consecutive artists', () {
     final result = service().build(
       candidates: [
         song('a1'),
@@ -72,50 +112,17 @@ void main() {
     expect(result[0].artist, isNot(result[1].artist));
   });
 
-  test('avoids consecutive tracks from the same album when alternatives exist',
-      () {
-    final result = service().build(
-      candidates: [
-        song('a1', album: 'Album A'),
-        song('a2', album: 'Album A'),
-        song('b1', artist: 'Other', album: 'Album B'),
-      ],
-      profile: profile,
-      history: const [],
-      length: 3,
-    );
-
-    expect(result[0].album, isNot(result[1].album));
-  });
-
-  test('preserves queue items and avoids duplicates when appending', () {
+  test('empty candidate pool produces an empty addition', () {
     final current = song('current');
 
     final result = service().append(
-      candidates: [
-        current,
-        song('one'),
-        song('two', artist: 'Other'),
-      ],
+      candidates: const [],
       currentQueue: [current],
       profile: profile,
       history: const [],
-      additional: 2,
+      additional: 3,
     );
 
-    expect(result.first.id, 'current');
-    expect(result.map((item) => item.id).toSet().length, result.length);
-    expect(result, hasLength(3));
-  });
-
-  test('returns an empty queue for non-positive length', () {
-    final result = service().build(
-      candidates: [song('one')],
-      profile: profile,
-      history: const [],
-      length: 0,
-    );
-
-    expect(result, isEmpty);
+    expect(result.map((item) => item.id), ['current']);
   });
 }

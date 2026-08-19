@@ -1,17 +1,12 @@
-Aurora Smart Queue v5
+Aurora Smart Queue v6
 
-Adds intelligent transition-aware queue selection on top of v4.
-
-Signals:
-- adaptive recommendation remains the base ranking
-- session intelligence remains active
-- mood continuity comes from MoodEnergyService
-- consecutive same-artist tracks are penalized
-- consecutive same-album tracks are penalized
-- large mood-score jumps receive a small penalty
-- nearby mood continuity receives a small bonus
-- duplicate/current-queue protection remains intact
-- append/regenerate preserve the existing queue
+Adaptive queue regeneration built on v5:
+- regeneration preserves the existing queue
+- already queued tracks are excluded from newly generated additions
+- repeated append/regenerate calls remain duplicate-safe
+- non-positive regeneration length is a no-op
+- transition-aware ordering remains active
+- adaptive, session and mood ranking remain the foundation
 
 Run:
 flutter analyze
