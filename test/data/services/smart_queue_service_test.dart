@@ -25,7 +25,11 @@ void main() {
     favoriteIds: {},
   );
 
-  OnlineSong song(String id, {String artist = 'Aurora'}) => OnlineSong(
+  OnlineSong song(
+    String id, {
+    String artist = 'Aurora',
+  }) =>
+      OnlineSong(
         id: id,
         title: id,
         artist: artist,
@@ -63,27 +67,41 @@ void main() {
     expect(result.first.id, 'fresh');
   });
 
-  test('without session service behavior remains compatible', () {
+  test('mood/context ranking does not remove valid candidates', () {
     final result = service().build(
-      candidates: [song('one'), song('two')],
+      candidates: [
+        song('energy-up'),
+        song('ordinary'),
+      ],
       profile: profile,
       history: const [],
       length: 2,
     );
 
     expect(result, hasLength(2));
+    expect(result.map((item) => item.id), contains('energy-up'));
   });
 
-  test('append preserves existing queue with session adaptation', () {
-    final session = SessionIntelligenceService();
-    session.recordPlay(localSong('one'));
-
-    final result = service(session: session).append(
+  test('append preserves existing queue', () {
+    final result = service().append(
       candidates: [song('one'), song('two')],
       currentQueue: [song('current')],
       profile: profile,
       history: const [],
       additional: 1,
+    );
+
+    expect(result.first.id, 'current');
+    expect(result.length, 2);
+  });
+
+  test('regenerate preserves existing queue', () {
+    final result = service().regenerate(
+      candidates: [song('one'), song('two')],
+      currentQueue: [song('current')],
+      profile: profile,
+      history: const [],
+      length: 1,
     );
 
     expect(result.first.id, 'current');

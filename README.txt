@@ -1,18 +1,23 @@
-Aurora Smart Queue v3
+Aurora Smart Queue v4 — Complete Compile Fix
 
-Adds optional session-aware queue adaptation using the existing
-SessionIntelligenceService.
+This replaces smart_queue_service.dart with a complete, type-safe v4
+implementation.
 
-Behavior:
-- current session plays/skips influence queue ordering
-- skipped session tracks are pushed down
-- played artists can receive session preference
-- existing SmartQueueService callers remain compatible because session is
-  optional
-- append/regenerate automatically inherit session-aware ordering
+Fixes:
+- removes invalid MoodProfile.energy access
+- removes invalid MoodProfile.valence access
+- uses MoodEnergyService.analyze(song, mood).score
+- defines _ContextCandidate
+- gives scored an explicit List<_ContextCandidate> type
+- keeps optional session ranking
+- preserves adaptive ranking, duplicate filtering, artist diversity,
+  append(), and regenerate()
 
-Run:
+Replace:
+lib/data/services/smart_queue_service.dart
+
+Then run:
 flutter analyze
 flutter test
 
-Do not commit until all tests pass.
+Do not commit until both are clean.

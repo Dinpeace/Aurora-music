@@ -29,19 +29,23 @@ class SmartQueueService {
     if (length <= 0) return const <OnlineSong>[];
 
     final currentIds = _ids(currentQueue);
-    mood ??= _mood.inferCurrentProfile();
+    final activeMood = mood ?? _mood.inferCurrentProfile();
 
     final ranked = _adaptive.rank(
       candidates: candidates,
       profile: profile,
       history: history,
       excludedIds: currentIds,
-      limit: length * 4,
+      limit: length * 5,
     );
 
-    final sessionRanked = _applySessionRanking(ranked);
+    final contextRanked = _applyContextRanking(
+      ranked,
+      mood: activeMood,
+    );
+
     return _select(
-      sessionRanked,
+      contextRanked,
       excludedIds: currentIds,
       length: length,
     );
@@ -60,6 +64,7 @@ class SmartQueueService {
     }
 
     final existing = currentQueue.toList(growable: false);
+
     final additions = build(
       candidates: candidates,
       currentQueue: existing,
@@ -69,7 +74,10 @@ class SmartQueueService {
       length: additional,
     );
 
-    return List<OnlineSong>.unmodifiable([...existing, ...additions]);
+    return List<OnlineSong>.unmodifiable([
+      ...existing,
+      ...additions,
+    ]);
   }
 
   List<OnlineSong> regenerate({
@@ -90,16 +98,24 @@ class SmartQueueService {
     );
   }
 
-  List<OnlineSong> _applySessionRanking(Iterable<OnlineSong> ranked) {
-    final session = _session;
-    if (session == null) return ranked.toList(growable: false);
+  List<OnlineSong> _applyContextRanking(
+    Iterable<OnlineSong> ranked, {
+    required MoodProfile mood,
+  }) {
+    final scored = <_ContextCandidate>[];
 
-    final scored = ranked.map((song) {
-      return _SessionCandidate(
-        song,
-        session.scoreOnlineSong(song),
-      );
-    }).toList();
+    for (final song in ranked) {
+      var score = 0.0;
+
+      final session = _session;
+      if (session != null) {
+        score += session.scoreOnlineSong(song);
+      }
+
+      score += _mood.analyze(song, mood).score;
+
+      scored.add(_ContextCandidate(song, score));
+    }
 
     scored.sort((a, b) {
       final comparison = b.score.compareTo(a.score);
@@ -110,7 +126,9 @@ class SmartQueueService {
           );
     });
 
-    return scored.map((item) => item.song).toList(growable: false);
+    return scored
+        .map<OnlineSong>((item) => item.song)
+        .toList(growable: false);
   }
 
   Set<String> _ids(Iterable<OnlineSong> songs) => songs
@@ -141,7 +159,9 @@ class SmartQueueService {
       }
 
       result.add(song);
-      if (artist.isNotEmpty) artistCounts[artist] = count + 1;
+      if (artist.isNotEmpty) {
+        artistCounts[artist] = count + 1;
+      }
     }
 
     if (result.length < length) {
@@ -150,6 +170,7 @@ class SmartQueueService {
 
         final id = _normalize(song.id);
         if (id.isEmpty || !seen.add(id)) continue;
+
         result.add(song);
       }
     }
@@ -160,8 +181,8 @@ class SmartQueueService {
   String _normalize(String value) => value.trim().toLowerCase();
 }
 
-class _SessionCandidate {
-  const _SessionCandidate(this.song, this.score);
+class _ContextCandidate {
+  const _ContextCandidate(this.song, this.score);
 
   final OnlineSong song;
   final double score;
