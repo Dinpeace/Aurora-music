@@ -1,15 +1,20 @@
-Aurora Smart Queue v9
+Aurora Smart Queue v10
 
-Time-aware preference decay built on v8.
+Context-aware listening modes built on v9.
 
-Signals:
-- recent taste is weighted more strongly
-- historical taste decays gradually with age
-- mature preferences retain a 20% floor
-- recent skips remain decisive
-- exploration remains available for unseen tracks
-- excluded IDs remain respected
-- v8 long-term preference learning remains the foundation
+Modes:
+- Balanced: normal recommendation behavior
+- Focus: favors focus/ambient/lo-fi metadata and smoother transitions
+- Chill: favors acoustic/chill/ambient/lo-fi metadata
+- Discovery: favors unfamiliar artists/albums
+- Favorites: favors known favorite artists/albums
+
+Design:
+- mode is a per-queue context, not a permanent taste-profile mutation
+- v9 time-aware preference decay remains active underneath
+- recent feedback remains active
+- transition logic adapts to the selected mode
+- current queue exclusions remain enforced
 
 Run:
 flutter analyze
