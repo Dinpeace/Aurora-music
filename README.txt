@@ -1,18 +1,12 @@
-Aurora Smart Queue v12
+Aurora Smart Queue v13
 
-Session-Aware Queue Evolution.
+Predictive Queue Intent.
 
-Builds on v11 with:
-- smoothed temporary session confidence
-- gradual mode evolution instead of abrupt mode changes
-- Discovery from sustained skip pressure
-- Favorites from sustained repeated successful plays
-- temporary confidence independent of persistent taste
-- queue generation using the evolved session mode
-- reset clears only session-evolution state
+- Predicts temporary Discovery/Favorites/Balanced intent from live session trajectory.
+- Uses smoothed confidence to prevent abrupt prediction flips.
+- Never mutates persistent taste or listening history.
+- Optional SmartQueueService extension consumes the prediction.
 
-Baseline target:
+Run:
 flutter analyze
 flutter test
-
-Keep the existing 73-test suite green and add the v12 regression tests before commit.
