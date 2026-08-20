@@ -1,34 +1,44 @@
-Aurora Music — Smart Queue v19
+Aurora Smart Queue v20-v40 Drop-In Layer
 
-Multi-Signal Queue Intelligence.
+IMPORTANT:
+- Additive to v1-v19.
+- Does not replace SmartQueueService.
+- No pubspec changes.
+- No third-party packages.
+- No changes to existing v1-v19 files are required.
 
-v19 introduces QueueIntelligenceCoordinator as the single decision layer
-between the existing intelligence services and future queue strategy.
+Files:
+lib/data/services/aurora_smart_queue_v20_v40.dart
+test/data/services/aurora_smart_queue_v20_v40_test.dart
 
-Inputs:
-- PredictiveQueueIntentService
-- ContinuousSessionLearningService
-- SessionPatternRecognitionService
-- SessionIntelligenceService
+Milestones:
+v20 conflict resolution
+v21 session state
+v22 momentum
+v23 skip prediction
+v24 transitions
+v25 diversity
+v26 dynamic queue length
+v27 next-track prediction
+v28 context
+v29 automatic modes
+v30 taste layers
+v31 taste decay
+v32 preference recovery
+v33 recommendation result/facade
+v34 explanation primitives
+v35/v36 presentation primitives
+v37 feedback
+v38 embeddings
+v39 semantic discovery
+v40 personal DJ facade
 
-Outputs:
-- ListeningMode
-- confidence
-- discovery signal
-- familiarity signal
-- recognized patterns
-- current session counts
+Install:
+1. Extract this archive into the Aurora project.
+2. Run:
+   flutter analyze
+   flutter test
 
-Design:
-- deterministic signal fusion
-- discovery can override familiarity when rejection is strong
-- temporary session intelligence only
-- reset does not erase persistent listening history
-- existing services remain independently testable
+Do not delete or overwrite existing v1-v19 services.
 
-Run:
-flutter analyze
-flutter test
-
-Expected baseline:
-106 existing tests + 6 v19 tests = 112 tests.
+Fix included: v20-v40 confidence math is explicitly converted to double for Dart's num-returning math.max.
