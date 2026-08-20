@@ -1,1 +1,1 @@
-Reference only. This bundle is additive and does not replace existing Aurora services.
+Reference only. Additive provider-resolver bundle; no Smart Queue replacement.

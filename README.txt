@@ -1,46 +1,35 @@
-Aurora Music — Cloud Catalog v1 Bundle
+Aurora Music — Cloud Catalog v2 Provider Resolver Bundle
 
 Purpose:
-Turn the online foundation into a centralized Aurora catalog contract.
+Add provider normalization and source resolution above Cloud Catalog v1.
 
 Adds:
-- server-side catalog repository abstraction
-- catalog search
-- trending catalog endpoint
-- single-song lookup
-- normalized song metadata
-- Flutter catalog client
+- stable Aurora catalog ID -> provider source mapping
+- provider priority
+- availability-aware fallback
+- quality-based tie breaking
+- normalized provider source model
+- Flutter resolver client
 - regression tests
 
-API:
-GET /v1/catalog/search?q=<query>
-GET /v1/catalog/trending
-GET /v1/catalog/song?id=<id>
-
-The repository is storage-agnostic. Replace the in-memory repository with a
-production database implementation later without changing the Flutter API.
-
-Provider fields preserve:
-- Aurora catalog ID
-- provider
-- provider ID
-- artwork
-- genres
-- duration
-- popularity
-- optional stream URL
-- optional lyrics URL
+Resolution example:
+Aurora ID
+  -> Aurora provider
+  -> YouTube provider
+  -> licensed provider
+  -> selected available source
 
 Important:
-- This does not host copyrighted music.
-- This does not extract YouTube audio.
-- This does not require localhost in production.
-- It does not replace Smart Queue v1-v60.
-- It does not add Flutter dependencies.
+- This bundle resolves metadata/source references only.
+- It does not extract YouTube audio.
+- It does not bypass provider restrictions.
+- Provider credentials remain server-side.
+- The actual playback layer must use an authorized source.
+- No production localhost dependency.
+- Smart Queue v1-v60 remains untouched.
 
 After extraction:
 flutter analyze
 flutter test
 
-Expected baseline:
-existing 159 tests + the new catalog tests.
+The current repository baseline before this bundle is 162 passing tests.
