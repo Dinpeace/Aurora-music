@@ -1,12 +1,18 @@
-Aurora Smart Queue v13
+Aurora Smart Queue v14
 
-Predictive Queue Intent.
+Predictive Queue Regeneration.
 
-- Predicts temporary Discovery/Favorites/Balanced intent from live session trajectory.
-- Uses smoothed confidence to prevent abrupt prediction flips.
-- Never mutates persistent taste or listening history.
-- Optional SmartQueueService extension consumes the prediction.
+Builds on v13 by allowing the queue tail to react to a confident predicted
+session intent without disturbing protected/current items.
+
+- regeneration is confidence-gated
+- only the unprotected queue tail is rebuilt
+- repeated regeneration of the same applied mode is suppressed
+- reset permits a new application
+- persistent taste and listening history remain untouched
 
 Run:
 flutter analyze
 flutter test
+
+Keep the existing 83-test baseline green and add the v14 regression tests.
