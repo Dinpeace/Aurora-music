@@ -1,34 +1,43 @@
-Aurora Music — Cloud Catalog v3 Metadata Matching Bundle
+Aurora Music — Cloud Platform v4-v15 Bundle
 
-Purpose:
-Add deterministic metadata normalization and duplicate/match scoring to the
-online Aurora catalog.
+This is one additive bundle instead of separate v4, v5, v6... drops.
 
-Adds:
-- normalized metadata
-- stable catalog identity keys
-- title/artist/album similarity
-- duration similarity
-- weighted match score
-- configurable match threshold
-- Flutter-side stable identity helper
-- regression tests
+Covered:
+v4  persistent catalog storage contract
+v5  catalog synchronization
+v6  provider availability
+v7  ingestion/domain contract
+v8  artwork/CDN metadata
+v9  search-index contract
+v10 catalog caching
+v11 playback-source resolution
+v12 lyrics metadata
+v13 listening history
+v14 favorites/playlists
+v15 cloud user profile
 
-Matching is conservative and deterministic. The service does not delete,
-merge, or mutate provider records. A production catalog layer can use the
-decision to propose/perform deduplication according to its own policy.
+Design:
+- dependency-free Dart domain layer
+- storage/network agnostic interfaces
+- in-memory implementations for safe local tests
+- provider credentials remain outside Flutter
+- playbackReference is opaque metadata, not a raw stream extractor
+- no YouTube audio extraction or restriction bypass
+- no production localhost dependency
+- Smart Queue v1-v60 is untouched
+- no new pubspec dependency
 
-Important:
-- Server remains authoritative.
-- No YouTube audio extraction.
-- No provider restriction bypass.
-- No localhost requirement.
-- Smart Queue v1-v60 remains untouched.
-- No new Flutter dependency.
+IMPORTANT:
+This bundle is a cloud-domain foundation, not a complete production backend.
+The interfaces are intended to be connected to the existing Aurora HTTPS API,
+database, object storage/CDN, authentication, and authorized provider services.
+The in-memory stores exist only to make the integration testable without
+requiring a local server.
 
-After extraction:
+Before committing:
 flutter analyze
 flutter test
 
-Baseline before this bundle:
-165 passing tests.
+Current baseline before this bundle: 168 passing tests.
+
+Regression fix: catalog search test no longer assumes a single result when multiple entries legitimately match.
