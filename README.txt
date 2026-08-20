@@ -1,45 +1,29 @@
-Aurora Music — Smart Queue v41–v60 Master Drop-In
+Aurora Music — Next Feature Bundle
 
-This is ONE additive bundle for v41 through v60.
+Feature selected after repository review:
+Playback Session Persistence & Recovery.
 
-Important:
-- It does NOT replace v1–v40.
-- It does NOT modify SmartQueueService.
-- It adds no pubspec dependencies.
-- Existing v1–v40 files remain untouched.
-- The v60 facade is intentionally isolated so adoption can be gradual.
+Why this feature:
+- The repository already has a substantial PlayerController with playback,
+  online playback, equalizer, crossfade, sleep timer, shuffle and repeat.
+- PlayerState currently represents the active session in memory.
+- This bundle adds a small persistence layer without replacing those existing
+  components.
+- shared_preferences is already present in pubspec.yaml, so no new dependency
+  is required.
 
-Milestones:
-v41 Real-world queue validation
-v42 Candidate pool health
-v43 Repetition guard
-v44 Recommendation stability
-v45 Regeneration cooldown
-v46 Confidence calibration
-v47 Exploration budget
-v48 Familiarity budget
-v49 Queue freshness
-v50 Mid-session adaptation checkpoint
-v51 Session snapshot
-v52 Session comparison
-v53 Long-term/session signal isolation
-v54 Preference recovery probe
-v55 Controlled discovery resurfacing
-v56 Recommendation audit
-v57 Safe fallback strategy
-v58 Offline evaluation
-v59 Production readiness gate
-v60 Personal DJ orchestration facade
+Files:
+lib/data/services/playback_session_persistence_service.dart
+test/data/services/playback_session_persistence_service_test.dart
 
-Add:
-Extract the ZIP into the Aurora project.
+Compatibility:
+- Additive only.
+- Does not modify PlayerController.
+- Does not modify PlayerState.
+- Does not modify Smart Queue v1-v60.
+- Uses the existing Song model.
+- Uses the existing shared_preferences dependency.
 
-Then run:
+Integration can be wired into PlayerController after this isolated layer passes:
 flutter analyze
 flutter test
-
-Do not delete existing v1–v40 services.
-
-The v41–v60 layer is dependency-free and uses only Dart core libraries.
-
-Fix: v58 precision/diversity values explicitly converted from num to double for Dart type safety.
