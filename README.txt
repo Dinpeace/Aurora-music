@@ -1,18 +1,19 @@
-Aurora Smart Queue v17
+Aurora Smart Queue v18
 
-Session Memory & Pattern Recognition.
+Pattern-Aware Queue Strategy.
 
-Builds on v16 with session-scoped recognition of recurring short-term patterns:
-- repeated skip -> Discovery
-- concentrated artist listening -> Favorites
-- completion-heavy sessions -> completion_heavy pattern
-- alternating behavior -> balanced-oriented pattern
-- bounded memory window
-- reset clears only temporary pattern memory
-- persistent taste/history remain untouched
+Builds on v17 by applying recognized session patterns to candidate ordering:
+- repeated skip discovery adds a bounded discovery-oriented ranking signal
+- artist affinity supports continuation-oriented ranking
+- completion-heavy sessions favor continuation-like candidates
+- alternating behavior preserves balanced ordering
+- upstream SmartQueue ranking remains the base
+- no persistent taste/history mutation
+- empty pattern memory preserves upstream order
 
 Run:
 flutter analyze
 flutter test
 
-Keep the existing 96-test baseline green and add the v17 regression tests.
+Target:
+101 existing tests + v18 regression tests = 106 tests.
