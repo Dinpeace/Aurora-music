@@ -1,5 +1,5 @@
 name: aurora_cloud_foundation
-description: Aurora Music production API foundation.
+description: Aurora Music cloud foundation and catalog API.
 publish_to: none
 
 environment:
