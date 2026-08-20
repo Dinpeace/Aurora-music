@@ -1,35 +1,34 @@
-Aurora Music — Cloud Catalog v2 Provider Resolver Bundle
+Aurora Music — Cloud Catalog v3 Metadata Matching Bundle
 
 Purpose:
-Add provider normalization and source resolution above Cloud Catalog v1.
+Add deterministic metadata normalization and duplicate/match scoring to the
+online Aurora catalog.
 
 Adds:
-- stable Aurora catalog ID -> provider source mapping
-- provider priority
-- availability-aware fallback
-- quality-based tie breaking
-- normalized provider source model
-- Flutter resolver client
+- normalized metadata
+- stable catalog identity keys
+- title/artist/album similarity
+- duration similarity
+- weighted match score
+- configurable match threshold
+- Flutter-side stable identity helper
 - regression tests
 
-Resolution example:
-Aurora ID
-  -> Aurora provider
-  -> YouTube provider
-  -> licensed provider
-  -> selected available source
+Matching is conservative and deterministic. The service does not delete,
+merge, or mutate provider records. A production catalog layer can use the
+decision to propose/perform deduplication according to its own policy.
 
 Important:
-- This bundle resolves metadata/source references only.
-- It does not extract YouTube audio.
-- It does not bypass provider restrictions.
-- Provider credentials remain server-side.
-- The actual playback layer must use an authorized source.
-- No production localhost dependency.
+- Server remains authoritative.
+- No YouTube audio extraction.
+- No provider restriction bypass.
+- No localhost requirement.
 - Smart Queue v1-v60 remains untouched.
+- No new Flutter dependency.
 
 After extraction:
 flutter analyze
 flutter test
 
-The current repository baseline before this bundle is 162 passing tests.
+Baseline before this bundle:
+165 passing tests.
