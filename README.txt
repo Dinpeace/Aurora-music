@@ -1,17 +1,18 @@
-Aurora Smart Queue v16
+Aurora Smart Queue v17
 
-Continuous Session Learning.
+Session Memory & Pattern Recognition.
 
-Builds on v15 with a continuously updated, ephemeral trajectory:
-- learns Discovery pressure incrementally from new skips
-- learns Favorites pressure incrementally from successful concentrated plays
-- ignores duplicate updates when no new session events arrived
-- complements predictive intent instead of replacing it
-- reset clears only temporary learning state
-- persistent taste and listening history remain untouched
+Builds on v16 with session-scoped recognition of recurring short-term patterns:
+- repeated skip -> Discovery
+- concentrated artist listening -> Favorites
+- completion-heavy sessions -> completion_heavy pattern
+- alternating behavior -> balanced-oriented pattern
+- bounded memory window
+- reset clears only temporary pattern memory
+- persistent taste/history remain untouched
 
 Run:
 flutter analyze
 flutter test
 
-Keep the existing 91-test baseline green and add the v16 regression tests.
+Keep the existing 96-test baseline green and add the v17 regression tests.
