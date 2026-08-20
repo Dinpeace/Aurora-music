@@ -1,0 +1,9 @@
+name: aurora_cloud_foundation
+description: Aurora Music production API foundation.
+publish_to: none
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+dev_dependencies:
+  test: ^1.25.0

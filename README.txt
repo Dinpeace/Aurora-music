@@ -1,29 +1,30 @@
-Aurora Music — Next Feature Bundle
+Aurora Music — YouTube Cloud Provider Bundle (Analyzer-Clean)
 
-Feature selected after repository review:
-Playback Session Persistence & Recovery.
+Purpose:
+Add YouTube catalog/search support to Aurora's online-first architecture.
 
-Why this feature:
-- The repository already has a substantial PlayerController with playback,
-  online playback, equalizer, crossfade, sleep timer, shuffle and repeat.
-- PlayerState currently represents the active session in memory.
-- This bundle adds a small persistence layer without replacing those existing
-  components.
-- shared_preferences is already present in pubspec.yaml, so no new dependency
-  is required.
+This bundle:
+- uses the official YouTube Data API for metadata/search;
+- keeps the API key server-side;
+- exposes an Aurora API-facing Flutter service;
+- does not extract, download, proxy, or expose raw YouTube audio;
+- does not bypass YouTube playback restrictions;
+- does not modify Smart Queue v1-v60.
 
-Files:
-lib/data/services/playback_session_persistence_service.dart
-test/data/services/playback_session_persistence_service_test.dart
+Analyzer fix:
+Backend tests use package imports instead of relative imports into lib/.
+The backend package is named aurora_cloud_foundation and both backend test
+files import from package:aurora_cloud_foundation/....
 
-Compatibility:
-- Additive only.
-- Does not modify PlayerController.
-- Does not modify PlayerState.
-- Does not modify Smart Queue v1-v60.
-- Uses the existing Song model.
-- Uses the existing shared_preferences dependency.
-
-Integration can be wired into PlayerController after this isolated layer passes:
+After extraction:
 flutter analyze
 flutter test
+
+Expected result:
+No issues found
+All existing tests continue to pass.
+
+Production note:
+For 24/7 Aurora streaming, actual playback must use an authorized/appropriately
+licensed playback source or an allowed YouTube playback surface. This bundle
+handles catalog/search integration, not unrestricted YouTube audio extraction.
