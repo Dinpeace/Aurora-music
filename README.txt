@@ -1,43 +1,28 @@
-Aurora Music — Cloud Platform v4-v15 Bundle
+Aurora Music — Online Platform Single Bundle
 
-This is one additive bundle instead of separate v4, v5, v6... drops.
+One additive bundle for the next online-first development step.
 
-Covered:
-v4  persistent catalog storage contract
-v5  catalog synchronization
-v6  provider availability
-v7  ingestion/domain contract
-v8  artwork/CDN metadata
-v9  search-index contract
-v10 catalog caching
-v11 playback-source resolution
-v12 lyrics metadata
-v13 listening history
-v14 favorites/playlists
-v15 cloud user profile
+Includes:
+- unified online state
+- cloud profile refresh
+- catalog search with cache
+- playback-source resolution gateway
+- bounded listening-history synchronization
+- favorites synchronization
+- playlist synchronization
+- catalog cache invalidation
+- replaceable catalog/user/playback/cache interfaces
+- deterministic in-memory cache for tests
 
-Design:
-- dependency-free Dart domain layer
-- storage/network agnostic interfaces
-- in-memory implementations for safe local tests
-- provider credentials remain outside Flutter
-- playbackReference is opaque metadata, not a raw stream extractor
-- no YouTube audio extraction or restriction bypass
-- no production localhost dependency
-- Smart Queue v1-v60 is untouched
-- no new pubspec dependency
+Production:
+Flutter -> Aurora HTTPS API -> cloud catalog/user/provider services.
 
-IMPORTANT:
-This bundle is a cloud-domain foundation, not a complete production backend.
-The interfaces are intended to be connected to the existing Aurora HTTPS API,
-database, object storage/CDN, authentication, and authorized provider services.
-The in-memory stores exist only to make the integration testable without
-requiring a local server.
+No production localhost dependency is introduced.
+No YouTube audio extraction or provider restriction bypass is included.
+Smart Queue v1-v60 and previous cloud catalog layers remain untouched.
+No new package dependency is required.
 
-Before committing:
+Previous clean baseline: 177 tests.
+Run after extraction:
 flutter analyze
 flutter test
-
-Current baseline before this bundle: 168 passing tests.
-
-Regression fix: catalog search test no longer assumes a single result when multiple entries legitimately match.
