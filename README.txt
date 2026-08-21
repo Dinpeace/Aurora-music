@@ -1,32 +1,37 @@
-Aurora Music — Cloud Auth & Secure Session Single Bundle
+Aurora Music — Cloud API Client Single Bundle
 
-One additive authentication/session foundation for the online Aurora platform.
+One additive typed client for the existing online Aurora architecture.
+
+Endpoints covered:
+GET  /v1/catalog/search
+GET  /v1/catalog/song
+GET  /v1/catalog/resolve
+GET  /v1/user/profile
+POST /v1/user/favorites
+POST /v1/user/playlists
+POST /v1/user/history
 
 Included:
-- sign-in state management
-- session restore
-- access/refresh session model
-- refresh-window validation
-- sign-out lifecycle
-- secure-session storage interface
-- multi-device session metadata
-- authentication failure state
-- replaceable cloud auth gateway
-- deterministic in-memory store for tests
+- transport abstraction
+- typed request model
+- typed catalog/search models
+- provider-resolution model
+- profile/favorites model
+- playlist model
+- listening-history serialization
+- unified API exception
+- deterministic mock transport tests
 
-Security boundary:
-The service never writes tokens to logs. The production implementation of
-AuroraSecureSessionStore should use OS-backed secure storage/keychain or an
-equivalent protected credential store. Do not use ordinary plaintext
-preferences for production refresh/access tokens.
+The transport adapter is responsible for HTTPS, authentication headers,
+timeouts, status-code mapping, and actual networking. This bundle deliberately
+does not introduce a localhost server or a new HTTP package dependency.
 
-Production architecture:
-Flutter -> Auth Manager -> HTTPS auth gateway -> Aurora Cloud.
+Authentication/session state remains owned by the existing auth layer.
+Cloud sync can use this client through an adapter.
 
-No localhost dependency and no new package dependency are introduced.
-Smart Queue v1-v60 and previous cloud/sync layers remain untouched.
+Smart Queue v1-v60 and previous cloud layers remain untouched.
 
-Previous clean baseline: 194 tests.
+Previous clean baseline: 203 tests.
 Run after extraction:
 flutter analyze
 flutter test

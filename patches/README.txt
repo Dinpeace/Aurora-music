@@ -1,1 +1,1 @@
-Reference only. Single additive Cloud Auth & Secure Session bundle.
+Reference only. Single additive Cloud API Client bundle.
