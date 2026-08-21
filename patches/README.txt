@@ -1,1 +1,1 @@
-Reference only. Single additive Cloud Data & Discovery bundle.
+Reference only. Single additive Cloud Media & Metadata bundle.

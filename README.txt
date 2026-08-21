@@ -1,29 +1,32 @@
-Aurora Music — Cloud Data & Discovery Single Bundle
+Aurora Music — Cloud Media & Metadata Single Bundle
 
-One additive discovery layer built above the existing Cloud API Client.
+One additive metadata layer above the existing Cloud API and Discovery layers.
 
 Included:
-- advanced catalog search request model
-- genre/mood/artist/album filtering
-- popularity threshold model
-- cursor-based pagination model
-- bounded result limits
-- stable cache keys
-- search-result caching interface
-- trending feed interface
-- autocomplete/suggestion interface
-- typed discovery result models
-- deterministic in-memory cache for tests
+- unified canonical Aurora track metadata
+- stable Aurora track IDs
+- title / artist / album / album artist
+- duration and metadata version
+- genres and moods
+- explicit-content flag
+- artwork and thumbnail metadata
+- lyrics availability/language/sync metadata
+- provider/source metadata
+- metadata freshness calculation
+- cache-friendly metadata keys
+- cache interface + in-memory test implementation
+- deterministic regression tests
 
-This bundle is a domain/gateway layer. The existing HTTPS API adapter can map
-AuroraDiscoveryGateway to the project's Cloud API Client without adding another
-HTTP dependency.
+Architecture:
+Flutter -> Media Metadata Service -> existing Cloud API adapter -> HTTPS.
+
+This bundle performs no networking itself and introduces no new dependency.
+The existing API layer can implement AuroraMediaMetadataGateway.
 
 No localhost dependency.
-No new package dependency.
-Smart Queue v1-v60 and previous cloud/auth/sync layers remain untouched.
+Smart Queue v1-v60 and previous auth/sync/API/discovery layers remain untouched.
 
-Previous clean baseline: 213 tests.
+Previous clean baseline: 222 tests.
 Run after extraction:
 flutter analyze
 flutter test
