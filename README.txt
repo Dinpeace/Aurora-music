@@ -1,37 +1,29 @@
-Aurora Music — Cloud API Client Single Bundle
+Aurora Music — Cloud Data & Discovery Single Bundle
 
-One additive typed client for the existing online Aurora architecture.
-
-Endpoints covered:
-GET  /v1/catalog/search
-GET  /v1/catalog/song
-GET  /v1/catalog/resolve
-GET  /v1/user/profile
-POST /v1/user/favorites
-POST /v1/user/playlists
-POST /v1/user/history
+One additive discovery layer built above the existing Cloud API Client.
 
 Included:
-- transport abstraction
-- typed request model
-- typed catalog/search models
-- provider-resolution model
-- profile/favorites model
-- playlist model
-- listening-history serialization
-- unified API exception
-- deterministic mock transport tests
+- advanced catalog search request model
+- genre/mood/artist/album filtering
+- popularity threshold model
+- cursor-based pagination model
+- bounded result limits
+- stable cache keys
+- search-result caching interface
+- trending feed interface
+- autocomplete/suggestion interface
+- typed discovery result models
+- deterministic in-memory cache for tests
 
-The transport adapter is responsible for HTTPS, authentication headers,
-timeouts, status-code mapping, and actual networking. This bundle deliberately
-does not introduce a localhost server or a new HTTP package dependency.
+This bundle is a domain/gateway layer. The existing HTTPS API adapter can map
+AuroraDiscoveryGateway to the project's Cloud API Client without adding another
+HTTP dependency.
 
-Authentication/session state remains owned by the existing auth layer.
-Cloud sync can use this client through an adapter.
+No localhost dependency.
+No new package dependency.
+Smart Queue v1-v60 and previous cloud/auth/sync layers remain untouched.
 
-Smart Queue v1-v60 and previous cloud layers remain untouched.
-
-Previous clean baseline: 203 tests.
+Previous clean baseline: 213 tests.
 Run after extraction:
 flutter analyze
 flutter test

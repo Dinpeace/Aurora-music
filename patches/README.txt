@@ -1,1 +1,1 @@
-Reference only. Single additive Cloud API Client bundle.
+Reference only. Single additive Cloud Data & Discovery bundle.
