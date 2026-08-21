@@ -1,1 +1,1 @@
-Reference only. Single additive online-platform bundle.
+Reference only. Single additive Cloud Sync & Reliability bundle.
