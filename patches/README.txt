@@ -1,1 +1,1 @@
-Reference only. Single additive Cloud Sync & Reliability bundle.
+Reference only. Single additive Cloud Auth & Secure Session bundle.
